@@ -30,6 +30,14 @@ function montarPermissoes(usuario) {
   };
 }
 
+function usuarioPrecisaTrocarSenha(usuario) {
+  return (
+    usuario?.deve_trocar_senha === true ||
+    usuario?.deve_trocar_senha === "true" ||
+    usuario?.deve_trocar_senha === 1
+  );
+}
+
 export default function App() {
   const [paginaAtual, setPaginaAtual] = useState("dashboard");
   const [equipamentoDetalheId, setEquipamentoDetalheId] = useState(null);
@@ -63,16 +71,48 @@ export default function App() {
     function encerrarSessao() {
       setUsuario(null);
       setPaginaAtual("dashboard");
+      setEquipamentoDetalheId(null);
+      setSetorDetalheId(null);
+    }
+
+    function forcarTrocaSenha() {
+      setUsuario((usuarioAtual) => {
+        if (!usuarioAtual) {
+          return usuarioAtual;
+        }
+
+        return {
+          ...usuarioAtual,
+          deve_trocar_senha: true,
+        };
+      });
+
+      setPaginaAtual("dashboard");
+      setEquipamentoDetalheId(null);
+      setSetorDetalheId(null);
     }
 
     window.addEventListener("sessao-expirada", encerrarSessao);
+    window.addEventListener("troca-senha-obrigatoria", forcarTrocaSenha);
 
     return () => {
       window.removeEventListener("sessao-expirada", encerrarSessao);
+      window.removeEventListener("troca-senha-obrigatoria", forcarTrocaSenha);
     };
   }, []);
 
+  function entrarNoSistema(usuarioLogado) {
+    setUsuario(usuarioLogado);
+    setPaginaAtual("dashboard");
+    setEquipamentoDetalheId(null);
+    setSetorDetalheId(null);
+  }
+
   function trocarPagina(pagina) {
+    if (usuarioPrecisaTrocarSenha(usuario)) {
+      return;
+    }
+
     if (pagina === "usuarios" && !permissoes.podeGerenciarUsuarios) {
       return;
     }
@@ -93,12 +133,20 @@ export default function App() {
   }
 
   function abrirDetalhesEquipamento(equipamentoId) {
+    if (usuarioPrecisaTrocarSenha(usuario)) {
+      return;
+    }
+
     setEquipamentoDetalheId(equipamentoId);
     setSetorDetalheId(null);
     setPaginaAtual("equipamento_detalhe");
   }
 
   function abrirDetalhesSetor(setorId) {
+    if (usuarioPrecisaTrocarSenha(usuario)) {
+      return;
+    }
+
     setSetorDetalheId(setorId);
     setEquipamentoDetalheId(null);
     setPaginaAtual("setor_detalhe");
@@ -118,7 +166,11 @@ export default function App() {
   }
 
   function senhaAlterada(usuarioAtualizado) {
-    setUsuario(usuarioAtualizado);
+    setUsuario({
+      ...usuarioAtualizado,
+      deve_trocar_senha: false,
+    });
+
     setPaginaAtual("dashboard");
     setEquipamentoDetalheId(null);
     setSetorDetalheId(null);
@@ -197,10 +249,10 @@ export default function App() {
   }
 
   if (!usuario) {
-    return <LoginPage aoEntrar={setUsuario} />;
+    return <LoginPage aoEntrar={entrarNoSistema} />;
   }
 
-  if (usuario.deve_trocar_senha) {
+  if (usuarioPrecisaTrocarSenha(usuario)) {
     return (
       <TrocarSenhaPage
         usuario={usuario}

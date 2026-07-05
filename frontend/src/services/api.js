@@ -30,6 +30,13 @@ export async function apiRequest(endpoint, options = {}) {
       window.dispatchEvent(new CustomEvent("sessao-expirada"));
     }
 
+    if (
+      resposta.status === 403 &&
+      dados.codigo === "troca_senha_obrigatoria"
+    ) {
+      window.dispatchEvent(new CustomEvent("troca-senha-obrigatoria"));
+    }
+
     throw erro;
   }
 
