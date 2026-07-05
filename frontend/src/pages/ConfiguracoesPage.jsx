@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import {
   FiArchive,
-  FiCheck,
   FiFileText,
   FiInfo,
   FiRefreshCw,
@@ -607,14 +606,6 @@ export default function ConfiguracoesPage() {
       </div>
 
       {renderizarAba()}
-
-      {!carregando && (
-        <div className="mt-5 flex items-start gap-3 border border-emerald-200 bg-emerald-50 p-4 text-sm leading-6 text-emerald-900">
-          <FiCheck className="mt-0.5 shrink-0" size={18} />
-          As configurações ficam salvas no backend e poderão ser usadas em novas
-          regras do sistema sem precisar alterar código diretamente.
-        </div>
-      )}
     </div>
   );
 }
