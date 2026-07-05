@@ -151,8 +151,11 @@ export default function Layout({
   const [menuAberto, setMenuAberto] = useState(true);
   const [menuMobileAberto, setMenuMobileAberto] = useState(false);
 
-  const equipamentosAtivo = paginaAtual === "equipamentos" || paginaAtual === "equipamento_detalhe";
-  const setoresAtivo = paginaAtual === "setores" || paginaAtual === "setor_detalhe";
+  const equipamentosAtivo =
+    paginaAtual === "equipamentos" || paginaAtual === "equipamento_detalhe";
+
+  const setoresAtivo =
+    paginaAtual === "setores" || paginaAtual === "setor_detalhe";
 
   function navegar(pagina) {
     aoTrocarPagina(pagina);
@@ -196,7 +199,11 @@ export default function Layout({
               className="flex h-9 w-9 items-center justify-center text-slate-400 hover:text-white"
               title={menuAberto ? "Recolher menu" : "Expandir menu"}
             >
-              {menuAberto ? <FiChevronLeft size={18} /> : <FiChevronRight size={18} />}
+              {menuAberto ? (
+                <FiChevronLeft size={18} />
+              ) : (
+                <FiChevronRight size={18} />
+              )}
             </button>
           )}
         </div>
@@ -304,7 +311,7 @@ export default function Layout({
         </nav>
 
         {(menuAberto || mobile) && (
-          <div className="absolute bottom-0 left-0 right-0 border-t border-white/10 p-4">
+          <div className="absolute bottom-0 left-0 right-0 border-t border-white/10 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
             <div className="mb-3">
               <p className="truncate text-sm font-bold text-white">
                 {usuario?.nome || usuario?.username}
@@ -358,7 +365,7 @@ export default function Layout({
           menuAberto ? "lg:pl-72" : "lg:pl-20",
         ].join(" ")}
       >
-        <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur">
+        <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 pt-[env(safe-area-inset-top)] backdrop-blur">
           <div className="flex min-h-16 items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:h-16 lg:py-0">
             <div className="flex min-w-0 items-center gap-3">
               <button
@@ -371,10 +378,10 @@ export default function Layout({
               </button>
 
               <div className="min-w-0">
-                <h1 className="truncate text-base font-bold text-slate-950 sm:text-lg">
+                <h1 className="truncate text-base font-bold leading-tight text-slate-950 sm:text-lg">
                   {tituloPagina(paginaAtual)}
                 </h1>
-                <p className="mt-0.5 line-clamp-2 text-xs text-slate-500 sm:line-clamp-1">
+                <p className="mt-0.5 line-clamp-2 text-xs leading-tight text-slate-500 sm:line-clamp-1">
                   {subtituloPagina(paginaAtual)}
                 </p>
               </div>
@@ -391,7 +398,7 @@ export default function Layout({
           </div>
         </header>
 
-        <div className="p-4 sm:p-5 lg:p-6">
+        <div className="p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:p-5 lg:p-6">
           {children}
         </div>
       </main>
