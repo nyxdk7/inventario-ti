@@ -4,6 +4,7 @@ import {
   FiArrowRight,
   FiCheckCircle,
   FiCpu,
+  FiDownload,
   FiEye,
   FiEyeOff,
   FiLock,
@@ -56,6 +57,13 @@ function CampoTexto({
   );
 }
 
+function verificarModoInstalado() {
+  const standaloneBrowser = window.matchMedia?.("(display-mode: standalone)")?.matches;
+  const standaloneIos = window.navigator.standalone === true;
+
+  return Boolean(standaloneBrowser || standaloneIos);
+}
+
 export default function LoginPage({ aoEntrar }) {
   const [formulario, setFormulario] = useState({
     username: "",
@@ -68,6 +76,10 @@ export default function LoginPage({ aoEntrar }) {
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState("");
 
+  const [eventoInstalacao, setEventoInstalacao] = useState(null);
+  const [appInstalado, setAppInstalado] = useState(false);
+  const [instalandoPwa, setInstalandoPwa] = useState(false);
+
   useEffect(() => {
     const usuarioSalvo = localStorage.getItem("inventario-ti-usuario");
 
@@ -79,12 +91,36 @@ export default function LoginPage({ aoEntrar }) {
     }
   }, []);
 
+  useEffect(() => {
+    setAppInstalado(verificarModoInstalado());
+
+    function capturarInstalacao(evento) {
+      evento.preventDefault();
+      setEventoInstalacao(evento);
+    }
+
+    function marcarInstalado() {
+      setAppInstalado(true);
+      setEventoInstalacao(null);
+    }
+
+    window.addEventListener("beforeinstallprompt", capturarInstalacao);
+    window.addEventListener("appinstalled", marcarInstalado);
+
+    return () => {
+      window.removeEventListener("beforeinstallprompt", capturarInstalacao);
+      window.removeEventListener("appinstalled", marcarInstalado);
+    };
+  }, []);
+
   const formularioValido = useMemo(() => {
     return (
       formulario.username.trim().length > 0 &&
       formulario.password.trim().length > 0
     );
   }, [formulario]);
+
+  const podeMostrarBotaoInstalar = Boolean(eventoInstalacao) && !appInstalado;
 
   function atualizarCampo(evento) {
     const { name, value } = evento.target;
@@ -99,6 +135,28 @@ export default function LoginPage({ aoEntrar }) {
 
   function verificarCapsLock(evento) {
     setCapsLockAtivo(evento.getModifierState?.("CapsLock") || false);
+  }
+
+  async function instalarAplicativo() {
+    if (!eventoInstalacao) {
+      return;
+    }
+
+    setInstalandoPwa(true);
+
+    try {
+      eventoInstalacao.prompt();
+
+      const escolha = await eventoInstalacao.userChoice;
+
+      if (escolha?.outcome === "accepted") {
+        setAppInstalado(true);
+      }
+
+      setEventoInstalacao(null);
+    } finally {
+      setInstalandoPwa(false);
+    }
   }
 
   async function entrar(evento) {
@@ -179,6 +237,18 @@ export default function LoginPage({ aoEntrar }) {
                 <FiAlertCircle className="mt-0.5 shrink-0" size={18} />
                 <p className="leading-5">{erro}</p>
               </div>
+            )}
+
+            {podeMostrarBotaoInstalar && (
+              <button
+                type="button"
+                onClick={instalarAplicativo}
+                disabled={instalandoPwa}
+                className="flex w-full items-center justify-center gap-2 border border-slate-300 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-800 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <FiDownload size={17} />
+                {instalandoPwa ? "Abrindo instalação..." : "Instalar aplicativo"}
+              </button>
             )}
 
             <CampoTexto
