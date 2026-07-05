@@ -80,6 +80,10 @@ function tituloPagina(paginaAtual) {
     return "Backups";
   }
 
+  if (paginaAtual === "configuracoes") {
+    return "Configurações do sistema";
+  }
+
   return "Usuários dos computadores";
 }
 
@@ -118,6 +122,10 @@ function subtituloPagina(paginaAtual) {
 
   if (paginaAtual === "backups") {
     return "Acompanhamento dos backups locais do banco e anexos";
+  }
+
+  if (paginaAtual === "configuracoes") {
+    return "Parâmetros gerais, segurança, backups, relatórios e ambiente";
   }
 
   return "Cadastro de IP, MAC e responsável pelo equipamento";
@@ -160,6 +168,10 @@ function nomeModulo(paginaAtual) {
     return "Backups";
   }
 
+  if (paginaAtual === "configuracoes") {
+    return "Configurações";
+  }
+
   return "Computadores";
 }
 
@@ -174,7 +186,9 @@ export default function Layout({
   const [menuAberto, setMenuAberto] = useState(true);
   const [menuMobileAberto, setMenuMobileAberto] = useState(false);
   const [adminAberto, setAdminAberto] = useState(
-    paginaAtual === "usuarios" || paginaAtual === "backups"
+    paginaAtual === "usuarios" ||
+      paginaAtual === "backups" ||
+      paginaAtual === "configuracoes"
   );
 
   const equipamentosAtivo =
@@ -184,7 +198,9 @@ export default function Layout({
     paginaAtual === "setores" || paginaAtual === "setor_detalhe";
 
   const administradorAtivo =
-    paginaAtual === "usuarios" || paginaAtual === "backups";
+    paginaAtual === "usuarios" ||
+    paginaAtual === "backups" ||
+    paginaAtual === "configuracoes";
 
   useEffect(() => {
     if (administradorAtivo) {
@@ -209,7 +225,9 @@ export default function Layout({
 
   function MenuConteudo({ mobile = false }) {
     const podeVerAdministrador =
-      permissoes?.podeGerenciarUsuarios || permissoes?.podeGerenciarBackups;
+      permissoes?.podeGerenciarUsuarios ||
+      permissoes?.podeGerenciarBackups ||
+      permissoes?.podeGerenciarConfiguracoes;
 
     return (
       <>
@@ -378,6 +396,17 @@ export default function Layout({
                     >
                       <FiArchive size={16} />
                       <span>Backups</span>
+                    </button>
+                  )}
+
+                  {permissoes?.podeGerenciarConfiguracoes && (
+                    <button
+                      type="button"
+                      onClick={() => navegar("configuracoes")}
+                      className={subItemClasse(paginaAtual === "configuracoes")}
+                    >
+                      <FiSettings size={16} />
+                      <span>Configurações</span>
                     </button>
                   )}
                 </div>

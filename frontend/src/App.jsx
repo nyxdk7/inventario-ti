@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import Layout from "./components/Layout";
 import BackupsPage from "./pages/BackupsPage";
 import ComputadoresPage from "./pages/ComputadoresPage";
+import ConfiguracoesPage from "./pages/ConfiguracoesPage";
 import DashboardPage from "./pages/DashboardPage";
 import EquipamentoDetalhePage from "./pages/EquipamentoDetalhePage";
 import EquipamentosPage from "./pages/EquipamentosPage";
@@ -26,6 +27,7 @@ function montarPermissoes(usuario) {
     podeGerenciarUsuarios: perfil === "admin",
     podeGerenciarSetores: perfil === "admin",
     podeGerenciarBackups: perfil === "admin",
+    podeGerenciarConfiguracoes: perfil === "admin",
     podeExcluir: perfil === "admin",
     podeEditarInventario: perfil === "admin" || perfil === "tecnico",
     podeGerarRelatorios: perfil === "admin" || perfil === "consulta",
@@ -120,6 +122,10 @@ export default function App() {
     }
 
     if (pagina === "backups" && !permissoes.podeGerenciarBackups) {
+      return;
+    }
+
+    if (pagina === "configuracoes" && !permissoes.podeGerenciarConfiguracoes) {
       return;
     }
 
@@ -243,6 +249,10 @@ export default function App() {
 
     if (paginaAtual === "backups" && permissoes.podeGerenciarBackups) {
       return <BackupsPage />;
+    }
+
+    if (paginaAtual === "configuracoes" && permissoes.podeGerenciarConfiguracoes) {
+      return <ConfiguracoesPage />;
     }
 
     return <DashboardPage permissoes={permissoes} />;
