@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   FiArchive,
+  FiChevronDown,
   FiChevronLeft,
   FiChevronRight,
   FiCpu,
@@ -12,6 +13,7 @@ import {
   FiMenu,
   FiMonitor,
   FiPackage,
+  FiSettings,
   FiTool,
   FiUsers,
   FiX,
@@ -23,6 +25,14 @@ function itemClasse(ativo) {
   }
 
   return "flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-medium text-slate-400 hover:bg-white/10 hover:text-white";
+}
+
+function subItemClasse(ativo) {
+  if (ativo) {
+    return "flex w-full items-center gap-3 bg-white/95 px-4 py-2.5 pl-12 text-left text-sm font-semibold text-slate-950";
+  }
+
+  return "flex w-full items-center gap-3 px-4 py-2.5 pl-12 text-left text-sm font-medium text-slate-400 hover:bg-white/10 hover:text-white";
 }
 
 function iconeClasse(ativo) {
@@ -163,6 +173,9 @@ export default function Layout({
 }) {
   const [menuAberto, setMenuAberto] = useState(true);
   const [menuMobileAberto, setMenuMobileAberto] = useState(false);
+  const [adminAberto, setAdminAberto] = useState(
+    paginaAtual === "usuarios" || paginaAtual === "backups"
+  );
 
   const equipamentosAtivo =
     paginaAtual === "equipamentos" || paginaAtual === "equipamento_detalhe";
@@ -170,12 +183,34 @@ export default function Layout({
   const setoresAtivo =
     paginaAtual === "setores" || paginaAtual === "setor_detalhe";
 
+  const administradorAtivo =
+    paginaAtual === "usuarios" || paginaAtual === "backups";
+
+  useEffect(() => {
+    if (administradorAtivo) {
+      setAdminAberto(true);
+    }
+  }, [administradorAtivo]);
+
   function navegar(pagina) {
     aoTrocarPagina(pagina);
     setMenuMobileAberto(false);
   }
 
+  function alternarAdministrador(mobile = false) {
+    if (!mobile && !menuAberto) {
+      setMenuAberto(true);
+      setAdminAberto(true);
+      return;
+    }
+
+    setAdminAberto((estadoAtual) => !estadoAtual);
+  }
+
   function MenuConteudo({ mobile = false }) {
+    const podeVerAdministrador =
+      permissoes?.podeGerenciarUsuarios || permissoes?.podeGerenciarBackups;
+
     return (
       <>
         <div className="flex h-16 items-center justify-between border-b border-white/10 px-5">
@@ -296,32 +331,58 @@ export default function Layout({
             </button>
           )}
 
-          {permissoes?.podeGerenciarUsuarios && (
-            <button
-              type="button"
-              onClick={() => navegar("usuarios")}
-              className={`${itemClasse(paginaAtual === "usuarios")} mt-2`}
-            >
-              <span className={iconeClasse(paginaAtual === "usuarios")}>
-                <FiUsers size={18} />
-              </span>
+          {podeVerAdministrador && (
+            <div className="mt-2">
+              <button
+                type="button"
+                onClick={() => alternarAdministrador(mobile)}
+                className={itemClasse(administradorAtivo)}
+              >
+                <span className={iconeClasse(administradorAtivo)}>
+                  <FiSettings size={18} />
+                </span>
 
-              {(menuAberto || mobile) && <span>Usuários</span>}
-            </button>
-          )}
+                {(menuAberto || mobile) && (
+                  <>
+                    <span className="flex-1">Administrador</span>
 
-          {permissoes?.podeGerenciarBackups && (
-            <button
-              type="button"
-              onClick={() => navegar("backups")}
-              className={`${itemClasse(paginaAtual === "backups")} mt-2`}
-            >
-              <span className={iconeClasse(paginaAtual === "backups")}>
-                <FiArchive size={18} />
-              </span>
+                    <FiChevronDown
+                      size={16}
+                      className={[
+                        "transition-transform",
+                        adminAberto ? "rotate-180" : "",
+                      ].join(" ")}
+                    />
+                  </>
+                )}
+              </button>
 
-              {(menuAberto || mobile) && <span>Backups</span>}
-            </button>
+              {adminAberto && (menuAberto || mobile) && (
+                <div className="mt-1 space-y-1">
+                  {permissoes?.podeGerenciarUsuarios && (
+                    <button
+                      type="button"
+                      onClick={() => navegar("usuarios")}
+                      className={subItemClasse(paginaAtual === "usuarios")}
+                    >
+                      <FiUsers size={16} />
+                      <span>Usuários</span>
+                    </button>
+                  )}
+
+                  {permissoes?.podeGerenciarBackups && (
+                    <button
+                      type="button"
+                      onClick={() => navegar("backups")}
+                      className={subItemClasse(paginaAtual === "backups")}
+                    >
+                      <FiArchive size={16} />
+                      <span>Backups</span>
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           )}
 
           <button
