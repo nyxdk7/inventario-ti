@@ -68,6 +68,15 @@ class InventarioAuthMiddleware:
                 status=403,
             )
 
+        if caminho.startswith("/api/backups/"):
+            return JsonResponse(
+                {
+                    "ok": False,
+                    "erro": "Somente administradores podem acessar os backups.",
+                },
+                status=403,
+            )
+
         if perfil == "consulta":
             if metodo not in ["GET", "HEAD"]:
                 return JsonResponse(

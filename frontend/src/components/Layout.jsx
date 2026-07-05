@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+  FiArchive,
   FiChevronLeft,
   FiChevronRight,
   FiCpu,
@@ -65,6 +66,10 @@ function tituloPagina(paginaAtual) {
     return "Usuários e permissões";
   }
 
+  if (paginaAtual === "backups") {
+    return "Backups";
+  }
+
   return "Usuários dos computadores";
 }
 
@@ -101,6 +106,10 @@ function subtituloPagina(paginaAtual) {
     return "Gerenciamento de acesso por perfil de usuário";
   }
 
+  if (paginaAtual === "backups") {
+    return "Acompanhamento dos backups locais do banco e anexos";
+  }
+
   return "Cadastro de IP, MAC e responsável pelo equipamento";
 }
 
@@ -135,6 +144,10 @@ function nomeModulo(paginaAtual) {
 
   if (paginaAtual === "usuarios") {
     return "Usuários";
+  }
+
+  if (paginaAtual === "backups") {
+    return "Backups";
   }
 
   return "Computadores";
@@ -294,6 +307,20 @@ export default function Layout({
               </span>
 
               {(menuAberto || mobile) && <span>Usuários</span>}
+            </button>
+          )}
+
+          {permissoes?.podeGerenciarBackups && (
+            <button
+              type="button"
+              onClick={() => navegar("backups")}
+              className={`${itemClasse(paginaAtual === "backups")} mt-2`}
+            >
+              <span className={iconeClasse(paginaAtual === "backups")}>
+                <FiArchive size={18} />
+              </span>
+
+              {(menuAberto || mobile) && <span>Backups</span>}
             </button>
           )}
 

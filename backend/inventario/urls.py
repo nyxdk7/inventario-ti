@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import auth_api, relatorios, views
+from . import auth_api, backup_api, relatorios, views
 
 
 urlpatterns = [
@@ -14,6 +14,10 @@ urlpatterns = [
     ),
     path("auth/usuarios/", auth_api.usuarios_view, name="auth_usuarios"),
     path("auth/usuarios/<int:pk>/", auth_api.usuario_detalhe_view, name="auth_usuario_detalhe"),
+
+    path("backups/", backup_api.backups_view, name="backups"),
+    path("backups/executar/", backup_api.executar_backup_view, name="backups_executar"),
+    path("backups/baixar/", backup_api.baixar_backup_view, name="backups_baixar"),
 
     path("dashboard/", views.dashboard_resumo, name="dashboard_resumo"),
 
