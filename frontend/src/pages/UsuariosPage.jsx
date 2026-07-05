@@ -9,6 +9,7 @@ const formularioInicial = {
   password: "",
   perfil: "consulta",
   is_active: true,
+  exigir_troca_senha: true,
 };
 
 const perfisPadrao = [
@@ -86,6 +87,12 @@ function UsuarioCardMobile({ usuario, aoEditar, aoExcluir }) {
           <span className={`inline-flex border px-2 py-1 text-xs font-bold ${usuario.is_active ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-red-200 bg-red-50 text-red-800"}`}>
             {usuario.is_active ? "Ativo" : "Inativo"}
           </span>
+
+          {usuario.deve_trocar_senha && (
+            <span className="inline-flex border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-bold text-amber-800">
+              Troca de senha pendente
+            </span>
+          )}
         </div>
       </div>
 
@@ -174,10 +181,18 @@ export default function UsuariosPage({ usuarioLogado }) {
   function atualizarCampo(evento) {
     const { name, value, type, checked } = evento.target;
 
-    setFormulario((estadoAtual) => ({
-      ...estadoAtual,
-      [name]: type === "checkbox" ? checked : value,
-    }));
+    setFormulario((estadoAtual) => {
+      const proximoEstado = {
+        ...estadoAtual,
+        [name]: type === "checkbox" ? checked : value,
+      };
+
+      if (name === "password" && editandoId && value.trim()) {
+        proximoEstado.exigir_troca_senha = true;
+      }
+
+      return proximoEstado;
+    });
   }
 
   function limparFormulario() {
@@ -235,6 +250,7 @@ export default function UsuariosPage({ usuarioLogado }) {
       password: "",
       perfil: usuario.perfil || "consulta",
       is_active: Boolean(usuario.is_active),
+      exigir_troca_senha: Boolean(usuario.deve_trocar_senha),
     });
 
     window.scrollTo({
@@ -346,7 +362,7 @@ export default function UsuariosPage({ usuarioLogado }) {
 
             <div>
               <label className="mb-1 block text-sm font-semibold text-slate-700">
-                Senha {editandoId ? "nova" : "inicial"}
+                {editandoId ? "Nova senha temporária" : "Senha temporária"}
               </label>
 
               <input
@@ -354,9 +370,17 @@ export default function UsuariosPage({ usuarioLogado }) {
                 name="password"
                 value={formulario.password}
                 onChange={atualizarCampo}
-                placeholder={editandoId ? "Deixe vazio para manter a senha atual" : "Digite uma senha inicial"}
+                placeholder={
+                  editandoId
+                    ? "Deixe vazio para manter a senha atual"
+                    : "Digite uma senha temporária"
+                }
                 className="w-full border border-slate-300 bg-white px-3 py-3 text-sm outline-none focus:border-slate-950 sm:py-2.5"
               />
+
+              <p className="mt-1 text-xs leading-5 text-slate-500">
+                Essa senha será usada apenas para o primeiro acesso ou redefinição.
+              </p>
             </div>
 
             <div>
@@ -378,7 +402,7 @@ export default function UsuariosPage({ usuarioLogado }) {
               </select>
             </div>
 
-            <div className="border border-slate-200 bg-slate-50 p-4">
+            <div className="space-y-3 border border-slate-200 bg-slate-50 p-4">
               <label className="flex items-center gap-3 text-sm font-bold text-slate-800">
                 <input
                   type="checkbox"
@@ -388,6 +412,23 @@ export default function UsuariosPage({ usuarioLogado }) {
                   className="h-5 w-5 sm:h-4 sm:w-4"
                 />
                 Usuário ativo
+              </label>
+
+              <label className="flex items-start gap-3 text-sm font-bold text-slate-800">
+                <input
+                  type="checkbox"
+                  name="exigir_troca_senha"
+                  checked={formulario.exigir_troca_senha}
+                  onChange={atualizarCampo}
+                  className="mt-0.5 h-5 w-5 sm:h-4 sm:w-4"
+                />
+
+                <span>
+                  Exigir troca de senha no próximo login
+                  <span className="mt-1 block text-xs font-normal leading-5 text-slate-500">
+                    Recomendado para novos usuários e redefinição de senha.
+                  </span>
+                </span>
               </label>
             </div>
 
@@ -433,7 +474,7 @@ export default function UsuariosPage({ usuarioLogado }) {
               type="text"
               value={busca}
               onChange={(evento) => setBusca(evento.target.value)}
-              placeholder="Buscar por login..."
+              placeholder="Buscar por login, nome ou e-mail..."
               className="w-full border border-slate-300 bg-white px-3 py-3 text-sm outline-none focus:border-slate-950 lg:max-w-xs lg:py-2.5"
             />
           </div>
@@ -473,6 +514,7 @@ export default function UsuariosPage({ usuarioLogado }) {
                   <th className="px-5 py-3">E-mail</th>
                   <th className="px-5 py-3">Perfil</th>
                   <th className="px-5 py-3">Status</th>
+                  <th className="px-5 py-3">Senha</th>
                   <th className="px-5 py-3">Último login</th>
                   <th className="px-5 py-3 text-right">Ações</th>
                 </tr>
@@ -481,7 +523,7 @@ export default function UsuariosPage({ usuarioLogado }) {
               <tbody>
                 {carregando && (
                   <tr>
-                    <td colSpan="6" className="px-5 py-8 text-center text-slate-500">
+                    <td colSpan="7" className="px-5 py-8 text-center text-slate-500">
                       Carregando usuários...
                     </td>
                   </tr>
@@ -489,7 +531,7 @@ export default function UsuariosPage({ usuarioLogado }) {
 
                 {!carregando && usuarios.length === 0 && (
                   <tr>
-                    <td colSpan="6" className="px-5 py-8 text-center text-slate-500">
+                    <td colSpan="7" className="px-5 py-8 text-center text-slate-500">
                       Nenhum usuário cadastrado ainda.
                     </td>
                   </tr>
@@ -518,6 +560,18 @@ export default function UsuariosPage({ usuarioLogado }) {
 
                     <td className="px-5 py-4">
                       {usuario.is_active ? "Ativo" : "Inativo"}
+                    </td>
+
+                    <td className="px-5 py-4">
+                      {usuario.deve_trocar_senha ? (
+                        <span className="inline-flex border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-bold text-amber-800">
+                          Troca pendente
+                        </span>
+                      ) : (
+                        <span className="text-slate-500">
+                          Definida
+                        </span>
+                      )}
                     </td>
 
                     <td className="px-5 py-4 text-slate-500">

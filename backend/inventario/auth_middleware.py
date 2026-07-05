@@ -1,6 +1,6 @@
 from django.http import JsonResponse
 
-from .auth_api import perfil_usuario
+from .auth_api import deve_trocar_senha, perfil_usuario
 
 
 class InventarioAuthMiddleware:
@@ -21,6 +21,7 @@ class InventarioAuthMiddleware:
             "/api/auth/login/",
             "/api/auth/logout/",
             "/api/auth/me/",
+            "/api/auth/alterar-senha-inicial/",
         ]
 
         if caminho in rotas_publicas:
@@ -35,6 +36,23 @@ class InventarioAuthMiddleware:
                 },
                 status=401,
             )
+
+        if deve_trocar_senha(request.user):
+            rotas_permitidas_com_troca_pendente = [
+                "/api/auth/logout/",
+                "/api/auth/me/",
+                "/api/auth/alterar-senha-inicial/",
+            ]
+
+            if caminho not in rotas_permitidas_com_troca_pendente:
+                return JsonResponse(
+                    {
+                        "ok": False,
+                        "erro": "É necessário definir uma nova senha antes de continuar.",
+                        "codigo": "troca_senha_obrigatoria",
+                    },
+                    status=403,
+                )
 
         perfil = perfil_usuario(request.user)
 

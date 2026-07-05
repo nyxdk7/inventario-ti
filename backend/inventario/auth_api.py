@@ -1,7 +1,14 @@
 import json
 
-from django.contrib.auth import authenticate, get_user_model, login, logout
+from django.contrib.auth import (
+    authenticate,
+    get_user_model,
+    login,
+    logout,
+    update_session_auth_hash,
+)
 from django.contrib.auth.models import Group
+from django.db.models import Q
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -22,6 +29,8 @@ GRUPOS_PERFIS = {
     "consulta": "Consulta",
 }
 
+GRUPO_TROCAR_SENHA = "Trocar senha no próximo login"
+
 
 def ler_json(request):
     if not request.body:
@@ -36,6 +45,31 @@ def ler_json(request):
 def criar_grupos_padrao():
     for nome_grupo in GRUPOS_PERFIS.values():
         Group.objects.get_or_create(name=nome_grupo)
+
+    Group.objects.get_or_create(name=GRUPO_TROCAR_SENHA)
+
+
+def deve_trocar_senha(user):
+    if not user or not user.is_authenticated:
+        return False
+
+    criar_grupos_padrao()
+
+    return user.groups.filter(name=GRUPO_TROCAR_SENHA).exists()
+
+
+def marcar_deve_trocar_senha(user):
+    criar_grupos_padrao()
+
+    grupo = Group.objects.get(name=GRUPO_TROCAR_SENHA)
+    user.groups.add(grupo)
+
+
+def limpar_deve_trocar_senha(user):
+    criar_grupos_padrao()
+
+    grupo = Group.objects.get(name=GRUPO_TROCAR_SENHA)
+    user.groups.remove(grupo)
 
 
 def perfil_usuario(user):
@@ -64,12 +98,13 @@ def usuario_para_json(user):
     return {
         "id": user.id,
         "username": user.username,
-        "nome": user.get_full_name() or user.username,
+        "nome": user.get_full_name() or user.first_name or user.username,
         "email": user.email or "",
         "is_active": user.is_active,
         "is_superuser": user.is_superuser,
         "perfil": perfil,
         "perfil_display": perfil_display(perfil),
+        "deve_trocar_senha": deve_trocar_senha(user),
         "ultimo_login": user.last_login.strftime("%d/%m/%Y %H:%M") if user.last_login else "-",
         "criado_em": user.date_joined.strftime("%d/%m/%Y %H:%M") if user.date_joined else "-",
     }
@@ -80,13 +115,16 @@ def aplicar_perfil(user, perfil):
 
     perfil = perfil if perfil in PERFIS else "consulta"
 
-    user.groups.clear()
+    grupos_perfil = Group.objects.filter(name__in=GRUPOS_PERFIS.values())
+
+    for grupo in grupos_perfil:
+        user.groups.remove(grupo)
 
     grupo = Group.objects.get(name=GRUPOS_PERFIS[perfil])
     user.groups.add(grupo)
 
-    user.is_staff = perfil == "admin"
-    user.is_superuser = perfil == "admin" and user.is_superuser
+    if not user.is_superuser:
+        user.is_staff = perfil == "admin"
 
     user.save()
 
@@ -190,6 +228,83 @@ def me_view(request):
 
 
 @csrf_exempt
+@require_http_methods(["POST"])
+def alterar_senha_inicial_view(request):
+    if not request.user.is_authenticated:
+        return JsonResponse(
+            {
+                "ok": False,
+                "erro": "Usuário não autenticado.",
+            },
+            status=401,
+        )
+
+    if not deve_trocar_senha(request.user):
+        return JsonResponse(
+            {
+                "ok": False,
+                "erro": "Este usuário não possui troca de senha pendente.",
+            },
+            status=400,
+        )
+
+    dados = ler_json(request)
+
+    nova_senha = str(dados.get("nova_senha", "")).strip()
+    confirmar_senha = str(dados.get("confirmar_senha", "")).strip()
+
+    if not nova_senha:
+        return JsonResponse(
+            {
+                "ok": False,
+                "erro": "Informe a nova senha.",
+            },
+            status=400,
+        )
+
+    if len(nova_senha) < 6:
+        return JsonResponse(
+            {
+                "ok": False,
+                "erro": "A nova senha precisa ter pelo menos 6 caracteres.",
+            },
+            status=400,
+        )
+
+    if nova_senha != confirmar_senha:
+        return JsonResponse(
+            {
+                "ok": False,
+                "erro": "A confirmação da senha não confere.",
+            },
+            status=400,
+        )
+
+    if nova_senha.lower() == request.user.username.lower():
+        return JsonResponse(
+            {
+                "ok": False,
+                "erro": "A senha não pode ser igual ao nome de usuário.",
+            },
+            status=400,
+        )
+
+    request.user.set_password(nova_senha)
+    request.user.save()
+
+    limpar_deve_trocar_senha(request.user)
+    update_session_auth_hash(request, request.user)
+
+    return JsonResponse(
+        {
+            "ok": True,
+            "mensagem": "Senha alterada com sucesso.",
+            "usuario": usuario_para_json(request.user),
+        }
+    )
+
+
+@csrf_exempt
 @require_http_methods(["GET", "POST"])
 def usuarios_view(request):
     if not usuario_eh_admin(request.user):
@@ -203,7 +318,11 @@ def usuarios_view(request):
         queryset = User.objects.all().order_by("username")
 
         if busca:
-            queryset = queryset.filter(username__icontains=busca)
+            queryset = queryset.filter(
+                Q(username__icontains=busca)
+                | Q(first_name__icontains=busca)
+                | Q(email__icontains=busca)
+            )
 
         return JsonResponse(
             {
@@ -226,6 +345,7 @@ def usuarios_view(request):
     password = str(dados.get("password", "")).strip()
     perfil = str(dados.get("perfil", "consulta")).strip()
     is_active = bool(dados.get("is_active", True))
+    exigir_troca_senha = bool(dados.get("exigir_troca_senha", True))
 
     if not username:
         return JsonResponse(
@@ -240,7 +360,7 @@ def usuarios_view(request):
         return JsonResponse(
             {
                 "ok": False,
-                "erro": "Informe uma senha inicial.",
+                "erro": "Informe uma senha temporária.",
             },
             status=400,
         )
@@ -265,6 +385,9 @@ def usuarios_view(request):
     user.save()
 
     aplicar_perfil(user, perfil)
+
+    if exigir_troca_senha:
+        marcar_deve_trocar_senha(user)
 
     return JsonResponse(
         {
@@ -332,6 +455,13 @@ def usuario_detalhe_view(request, pk):
     perfil = str(dados.get("perfil", perfil_usuario(user))).strip()
     is_active = bool(dados.get("is_active", user.is_active))
 
+    exigir_troca_senha = bool(
+        dados.get(
+            "exigir_troca_senha",
+            True if password else deve_trocar_senha(user),
+        )
+    )
+
     if not username:
         return JsonResponse(
             {
@@ -368,6 +498,11 @@ def usuario_detalhe_view(request, pk):
     user.save()
 
     aplicar_perfil(user, perfil)
+
+    if exigir_troca_senha:
+        marcar_deve_trocar_senha(user)
+    else:
+        limpar_deve_trocar_senha(user)
 
     return JsonResponse(
         {

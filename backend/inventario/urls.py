@@ -7,6 +7,11 @@ urlpatterns = [
     path("auth/login/", auth_api.login_view, name="auth_login"),
     path("auth/logout/", auth_api.logout_view, name="auth_logout"),
     path("auth/me/", auth_api.me_view, name="auth_me"),
+    path(
+        "auth/alterar-senha-inicial/",
+        auth_api.alterar_senha_inicial_view,
+        name="auth_alterar_senha_inicial",
+    ),
     path("auth/usuarios/", auth_api.usuarios_view, name="auth_usuarios"),
     path("auth/usuarios/<int:pk>/", auth_api.usuario_detalhe_view, name="auth_usuario_detalhe"),
 

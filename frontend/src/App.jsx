@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 
 import Layout from "./components/Layout";
-import DashboardPage from "./pages/DashboardPage";
 import ComputadoresPage from "./pages/ComputadoresPage";
+import DashboardPage from "./pages/DashboardPage";
 import EquipamentoDetalhePage from "./pages/EquipamentoDetalhePage";
 import EquipamentosPage from "./pages/EquipamentosPage";
 import LoginPage from "./pages/LoginPage";
@@ -10,6 +10,7 @@ import ManutencoesPage from "./pages/ManutencoesPage";
 import RelatoriosPage from "./pages/RelatoriosPage";
 import SetorDetalhePage from "./pages/SetorDetalhePage";
 import SetoresPage from "./pages/SetoresPage";
+import TrocarSenhaPage from "./pages/TrocarSenhaPage";
 import UsuariosPage from "./pages/UsuariosPage";
 import { apiRequest } from "./services/api";
 
@@ -116,6 +117,13 @@ export default function App() {
     }
   }
 
+  function senhaAlterada(usuarioAtualizado) {
+    setUsuario(usuarioAtualizado);
+    setPaginaAtual("dashboard");
+    setEquipamentoDetalheId(null);
+    setSetorDetalheId(null);
+  }
+
   function renderizarPagina() {
     if (paginaAtual === "dashboard") {
       return <DashboardPage permissoes={permissoes} />;
@@ -190,6 +198,16 @@ export default function App() {
 
   if (!usuario) {
     return <LoginPage aoEntrar={setUsuario} />;
+  }
+
+  if (usuario.deve_trocar_senha) {
+    return (
+      <TrocarSenhaPage
+        usuario={usuario}
+        aoSenhaAlterada={senhaAlterada}
+        aoSair={sair}
+      />
+    );
   }
 
   return (
