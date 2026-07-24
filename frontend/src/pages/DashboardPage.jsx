@@ -36,7 +36,7 @@ function CardResumo({ titulo, valor, descricao, icone: Icone }) {
           )}
         </div>
 
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center bg-slate-950 text-white">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center text-slate-500">
           <Icone size={21} />
         </div>
       </div>

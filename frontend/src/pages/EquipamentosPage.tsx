@@ -15,6 +15,7 @@ import { apiRequest } from "../services/api";
 
 const formularioInicial = {
   tipo: "desktop",
+  tipo_outro_descricao: "",
   patrimonio: "",
   marca: "",
   modelo: "",
@@ -204,7 +205,7 @@ function ResumoCard({ titulo, valor, descricao, icone: Icone }) {
           )}
         </div>
 
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center bg-slate-950 text-white">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center text-slate-500">
           <Icone size={20} />
         </div>
       </div>
@@ -464,6 +465,10 @@ export default function EquipamentosPage({ aoVerDetalhes, permissoes }) {
         [name]: type === "checkbox" ? checked : value,
       };
 
+      if (name === "tipo" && value !== "outro") {
+        novoEstado.tipo_outro_descricao = "";
+      }
+
       if (name === "produto_novo" && !checked) {
         novoEstado.data_compra = "";
         novoEstado.fornecedor = "";
@@ -599,6 +604,7 @@ export default function EquipamentosPage({ aoVerDetalhes, permissoes }) {
 
     setFormulario({
       tipo: equipamento.tipo || "desktop",
+      tipo_outro_descricao: equipamento.tipo_outro_descricao || "",
       patrimonio: equipamento.patrimonio || "",
       marca: equipamento.marca || "",
       modelo: equipamento.modelo || "",
@@ -790,7 +796,7 @@ export default function EquipamentosPage({ aoVerDetalhes, permissoes }) {
 
           {!carregando && equipamentos.length === 0 && (
             <div className="border border-slate-200 bg-white p-8 text-center">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center bg-slate-100 text-slate-400">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center text-slate-400">
                 <FiHardDrive size={25} />
               </div>
               <p className="mt-4 text-sm font-bold text-slate-800">
@@ -870,6 +876,22 @@ export default function EquipamentosPage({ aoVerDetalhes, permissoes }) {
                           ))}
                         </select>
                       </Campo>
+
+                      {formulario.tipo === "outro" && (
+                        <Campo label="Descreva o tipo do equipamento">
+                          <input
+                            type="text"
+                            name="tipo_outro_descricao"
+                            value={formulario.tipo_outro_descricao}
+                            onChange={atualizarCampo}
+                            placeholder="Ex: DVR, câmera, fonte, access point..."
+                            className={inputClasse}
+                          />
+                          <p className="mt-1 text-xs text-slate-500">
+                            Esse texto aparecerá na listagem no lugar de apenas “Outro”.
+                          </p>
+                        </Campo>
+                      )}
 
                       <Campo label="Status">
                         <select

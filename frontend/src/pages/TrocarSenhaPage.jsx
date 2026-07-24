@@ -122,7 +122,7 @@ export default function TrocarSenhaPage({ usuario, aoSenhaAlterada, aoSair }) {
     <div className="flex min-h-screen items-center justify-center bg-[#f4f5f7] p-4 sm:p-6">
       <div className="w-full max-w-md">
         <div className="mb-6 flex items-center justify-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center bg-slate-950 text-white">
+          <div className="flex h-12 w-12 items-center justify-center text-slate-500">
             <FiCpu size={26} />
           </div>
 

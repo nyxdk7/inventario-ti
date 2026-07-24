@@ -188,7 +188,8 @@ def equipamento_para_json(equipamento, request):
     return {
         "id": equipamento.id,
         "tipo": equipamento.tipo,
-        "tipo_display": equipamento.get_tipo_display(),
+        "tipo_outro_descricao": equipamento.tipo_outro_descricao,
+        "tipo_display": equipamento.tipo_outro_descricao if equipamento.tipo == Equipamento.TIPO_OUTRO and equipamento.tipo_outro_descricao else equipamento.get_tipo_display(),
         "patrimonio": equipamento.patrimonio or "",
         "marca": equipamento.marca,
         "modelo": equipamento.modelo,
@@ -796,6 +797,7 @@ def equipamentos(request):
         if busca:
             queryset = queryset.filter(
                 Q(tipo__icontains=busca)
+                | Q(tipo_outro_descricao__icontains=busca)
                 | Q(patrimonio__icontains=busca)
                 | Q(marca__icontains=busca)
                 | Q(modelo__icontains=busca)
@@ -826,6 +828,7 @@ def equipamentos(request):
         return resposta_erro("JSON inválido.", status=400)
 
     tipo = (dados.get("tipo") or "").strip()
+    tipo_outro_descricao = (dados.get("tipo_outro_descricao") or "").strip()
     patrimonio = (dados.get("patrimonio") or "").strip()
     marca = (dados.get("marca") or "").strip()
     modelo = (dados.get("modelo") or "").strip()
@@ -891,6 +894,7 @@ def equipamentos(request):
 
     equipamento = Equipamento(
         tipo=tipo,
+        tipo_outro_descricao=tipo_outro_descricao,
         patrimonio=patrimonio or None,
         marca=marca,
         modelo=modelo,
@@ -976,6 +980,7 @@ def equipamento_detalhe(request, pk):
         return resposta_erro("JSON inválido.", status=400)
 
     tipo = (dados.get("tipo") or "").strip()
+    tipo_outro_descricao = (dados.get("tipo_outro_descricao") or "").strip()
     patrimonio = (dados.get("patrimonio") or "").strip()
     marca = (dados.get("marca") or "").strip()
     modelo = (dados.get("modelo") or "").strip()
@@ -1045,6 +1050,7 @@ def equipamento_detalhe(request, pk):
             )
 
     equipamento.tipo = tipo
+    equipamento.tipo_outro_descricao = tipo_outro_descricao
     equipamento.patrimonio = patrimonio or None
     equipamento.marca = marca
     equipamento.modelo = modelo

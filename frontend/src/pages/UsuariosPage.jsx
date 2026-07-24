@@ -55,7 +55,7 @@ function Aviso({ aviso, onFechar }) {
 
 function badgePerfil(perfil) {
   if (perfil === "admin") {
-    return "border-slate-900 bg-slate-900 text-white";
+    return "border-slate-200 bg-slate-50 text-slate-700";
   }
 
   if (perfil === "tecnico") {

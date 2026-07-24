@@ -1,25 +1,13 @@
-Pacote: melhoria da tela de Equipamentos
+Pacote: melhorias de interface geral do Inventário de T.I.
 
-Arquivo alterado:
-frontend/src/pages/EquipamentosPage.tsx
+Alterações incluídas:
+- Computadores: formulário fixo removido, cadastro/edição em painel lateral, lista em cards.
+- Setores: formulário fixo removido, cadastro/edição em painel lateral, lista em cards.
+- Histórico: formulário fixo removido, cadastro/edição em painel lateral, lista em cards.
+- Equipamentos: campo manual ao selecionar tipo "Outro".
+- Ícones dos cards sem fundo preto.
+- Menu lateral ajustado para não bugar quando a seção Administrador expandir.
 
-Como aplicar no Windows/PowerShell:
-1) Extraia o ZIP na raiz do projeto: C:\projetos\inventario-ti
-2) O arquivo deve substituir: C:\projetos\inventario-ti\frontend\src\pages\EquipamentosPage.tsx
-3) Teste localmente:
-   cd C:\projetos\inventario-ti\frontend
-   npm install
-   npm run build
-
-Depois subir:
-   cd C:\projetos\inventario-ti
-   git add .
-   git commit -m "Melhora interface da tela de equipamentos"
-   git push
-
-Na VPS:
-   cd /var/www/inventario-ti
-   git pull
-   cd /var/www/inventario-ti/frontend
-   npm run build
-   systemctl reload nginx
+Atenção:
+Esta etapa adiciona o campo tipo_outro_descricao no modelo Equipamento.
+Depois de aplicar o ZIP, rode makemigrations e migrate antes de subir para a VPS.

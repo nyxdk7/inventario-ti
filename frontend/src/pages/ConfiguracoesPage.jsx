@@ -81,7 +81,7 @@ function AbaBotao({ ativa, icone: Icone, texto, aoClicar }) {
       className={[
         "flex items-center gap-2 border px-4 py-3 text-sm font-bold",
         ativa
-          ? "border-slate-950 bg-slate-950 text-white"
+          ? "border-slate-950 text-slate-500"
           : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50",
       ].join(" ")}
     >

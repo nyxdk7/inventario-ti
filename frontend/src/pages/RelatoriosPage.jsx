@@ -49,7 +49,7 @@ function CardRelatorio({ relatorio, busca }) {
     <div className="border border-slate-200 bg-white">
       <div className="border-b border-slate-200 p-5">
         <div className="flex items-start gap-4">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center bg-slate-950 text-white">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center text-slate-500">
             <Icone size={22} />
           </div>
 

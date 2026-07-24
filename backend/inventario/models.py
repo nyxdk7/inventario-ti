@@ -243,6 +243,7 @@ class Equipamento(models.Model):
     ]
 
     tipo = models.CharField(max_length=30, choices=TIPOS, verbose_name="Tipo do equipamento")
+    tipo_outro_descricao = models.CharField(max_length=120, blank=True, verbose_name="Descrição do tipo quando outro")
     patrimonio = models.CharField(max_length=80, unique=True, null=True, blank=True, verbose_name="Patrimônio")
     marca = models.CharField(max_length=100, blank=True, verbose_name="Marca")
     modelo = models.CharField(max_length=120, blank=True, verbose_name="Modelo")
@@ -279,6 +280,7 @@ class Equipamento(models.Model):
 
     def clean(self):
         self.tipo = (self.tipo or "").strip()
+        self.tipo_outro_descricao = (self.tipo_outro_descricao or "").strip()
         self.patrimonio = (self.patrimonio or "").strip() or None
         self.marca = (self.marca or "").strip()
         self.modelo = (self.modelo or "").strip()
@@ -293,6 +295,9 @@ class Equipamento(models.Model):
         if not self.tipo:
             raise ValidationError({"tipo": "Informe o tipo do equipamento."})
 
+        if self.tipo == self.TIPO_OUTRO and not self.tipo_outro_descricao:
+            raise ValidationError({"tipo_outro_descricao": "Informe qual é o tipo do equipamento."})
+
         if not self.status:
             raise ValidationError({"status": "Informe o status do equipamento."})
 
@@ -301,6 +306,7 @@ class Equipamento(models.Model):
 
     def save(self, *args, **kwargs):
         self.tipo = (self.tipo or "").strip()
+        self.tipo_outro_descricao = (self.tipo_outro_descricao or "").strip()
         self.patrimonio = (self.patrimonio or "").strip() or None
         self.marca = (self.marca or "").strip()
         self.modelo = (self.modelo or "").strip()
@@ -311,6 +317,9 @@ class Equipamento(models.Model):
         self.numero_nota_fiscal = (self.numero_nota_fiscal or "").strip()
         self.origem = (self.origem or "").strip()
         self.observacoes = (self.observacoes or "").strip()
+
+        if self.tipo != self.TIPO_OUTRO:
+            self.tipo_outro_descricao = ""
 
         if not self.produto_novo:
             self.data_compra = None
@@ -324,7 +333,7 @@ class Equipamento(models.Model):
 
     def __str__(self):
         partes = [
-            self.get_tipo_display(),
+            self.tipo_outro_descricao if self.tipo == self.TIPO_OUTRO and self.tipo_outro_descricao else self.get_tipo_display(),
             self.marca,
             self.modelo,
             self.patrimonio or self.numero_serie or "",

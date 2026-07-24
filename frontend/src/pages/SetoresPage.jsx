@@ -1,4 +1,16 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  FiEdit2,
+  FiEye,
+  FiMapPin,
+  FiMonitor,
+  FiPackage,
+  FiPlus,
+  FiSearch,
+  FiTrash2,
+  FiUsers,
+  FiX,
+} from "react-icons/fi";
 
 import { apiRequest } from "../services/api";
 
@@ -7,6 +19,8 @@ const formularioInicial = {
   responsavel: "",
   observacoes: "",
 };
+
+const inputClasse = "w-full border border-slate-300 bg-white px-3 py-3 text-sm outline-none focus:border-slate-950 sm:py-2.5";
 
 function Aviso({ aviso, onFechar }) {
   if (!aviso) {
@@ -23,15 +37,8 @@ function Aviso({ aviso, onFechar }) {
     <div className={`mb-5 border p-4 ${estilos[aviso.tipo] || estilos.erro}`}>
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="font-semibold">
-            {aviso.titulo}
-          </p>
-
-          {aviso.texto && (
-            <p className="mt-1 text-sm">
-              {aviso.texto}
-            </p>
-          )}
+          <p className="font-semibold">{aviso.titulo}</p>
+          {aviso.texto && <p className="mt-1 text-sm">{aviso.texto}</p>}
         </div>
 
         <button
@@ -45,97 +52,129 @@ function Aviso({ aviso, onFechar }) {
 
       {aviso.setor && (
         <div className="mt-4 border border-amber-200 bg-white p-3 text-sm">
-          <p>
-            <span className="font-bold">Setor existente:</span> {aviso.setor.nome}
-          </p>
-
-          <p className="mt-1">
-            <span className="font-bold">Responsável:</span> {aviso.setor.responsavel || "-"}
-          </p>
+          <p><span className="font-bold">Setor existente:</span> {aviso.setor.nome}</p>
+          <p className="mt-1"><span className="font-bold">Responsável:</span> {aviso.setor.responsavel || "-"}</p>
         </div>
       )}
     </div>
   );
 }
 
-function CardInfo({ titulo, valor }) {
+function ResumoCard({ titulo, valor, descricao, icone: Icone }) {
   return (
-    <div>
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+    <div className="border border-slate-200 bg-white p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
+            {titulo}
+          </p>
+          <p className="mt-2 text-2xl font-black text-slate-950">{valor}</p>
+          {descricao && <p className="mt-1 text-sm text-slate-500">{descricao}</p>}
+        </div>
+
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center text-slate-500">
+          <Icone size={22} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function InfoCompacta({ titulo, valor }) {
+  return (
+    <div className="min-w-0">
+      <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">
         {titulo}
       </p>
-
-      <p className="mt-1 break-words text-sm font-semibold text-slate-800">
+      <p className="mt-1 truncate text-sm font-semibold text-slate-800">
         {valor || "-"}
       </p>
     </div>
   );
 }
 
-function SetorCardMobile({ setor, aoVerDetalhes, aoEditar, aoExcluir }) {
+function SetorCard({ setor, aoVerDetalhes, aoEditar, aoExcluir, podeEditar, podeExcluir }) {
   return (
-    <div className="border border-slate-200 bg-white p-4">
-      <div>
-        <h3 className="break-words text-base font-bold text-slate-950">
-          {setor.nome}
-        </h3>
-
-        <p className="mt-1 text-sm text-slate-500">
-          Responsável: {setor.responsavel || "-"}
-        </p>
-      </div>
-
-      <div className="mt-4 grid grid-cols-2 gap-4 border-t border-slate-100 pt-4">
-        <CardInfo titulo="Computadores" valor={setor.total_computadores} />
-        <CardInfo titulo="Equipamentos" valor={setor.total_equipamentos} />
-        <CardInfo titulo="Criado em" valor={setor.criado_em} />
-        <CardInfo titulo="Atualizado" valor={setor.atualizado_em} />
-      </div>
-
-      {setor.observacoes && (
-        <div className="mt-4 border border-slate-200 bg-slate-50 p-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-            Observações
-          </p>
-
-          <p className="mt-1 line-clamp-4 break-words text-sm leading-6 text-slate-700">
-            {setor.observacoes}
-          </p>
+    <article className="border border-slate-200 bg-white p-4 transition hover:border-slate-300 hover:shadow-sm sm:p-5">
+      <div className="grid gap-4 lg:grid-cols-[56px_1fr_auto] lg:items-start">
+        <div className="flex h-14 w-14 items-center justify-center border border-slate-200 text-slate-500">
+          <FiMapPin size={25} />
         </div>
-      )}
 
-      <div className="mt-4 grid gap-2">
-        <button
-          type="button"
-          onClick={() => aoVerDetalhes?.(setor.id)}
-          className="w-full border border-slate-950 bg-slate-950 px-4 py-3 text-sm font-bold text-white hover:bg-slate-800"
-        >
-          Ver detalhes
-        </button>
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="break-words text-base font-black text-slate-950 sm:text-lg">
+              {setor.nome}
+            </h3>
 
-        <div className="grid grid-cols-2 gap-2">
+            <span className="border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-bold text-slate-700">
+              {setor.responsavel || "Sem responsável"}
+            </span>
+          </div>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <InfoCompacta titulo="Computadores" valor={setor.total_computadores} />
+            <InfoCompacta titulo="Equipamentos" valor={setor.total_equipamentos} />
+            <InfoCompacta titulo="Criado em" valor={setor.criado_em} />
+            <InfoCompacta titulo="Atualizado" valor={setor.atualizado_em} />
+          </div>
+
+          {setor.observacoes && (
+            <p className="mt-4 line-clamp-2 border-l-2 border-slate-200 pl-3 text-sm leading-6 text-slate-500">
+              {setor.observacoes}
+            </p>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-2 lg:min-w-36">
           <button
             type="button"
-            onClick={() => aoEditar(setor)}
-            className="border border-slate-300 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-100"
+            onClick={() => aoVerDetalhes?.(setor.id)}
+            className="flex items-center justify-center gap-2 border border-slate-950 bg-slate-950 px-4 py-3 text-sm font-bold text-white hover:bg-slate-800 lg:py-2.5"
           >
-            Editar
+            <FiEye size={16} />
+            Ver detalhes
           </button>
 
-          <button
-            type="button"
-            onClick={() => aoExcluir(setor)}
-            className="border border-red-200 px-4 py-3 text-sm font-bold text-red-700 hover:bg-red-50"
-          >
-            Excluir
-          </button>
+          {podeEditar && (
+            <button
+              type="button"
+              onClick={() => aoEditar(setor)}
+              className="flex items-center justify-center gap-2 border border-slate-300 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-100 lg:py-2.5"
+            >
+              <FiEdit2 size={16} />
+              Editar
+            </button>
+          )}
+
+          {podeExcluir && (
+            <button
+              type="button"
+              onClick={() => aoExcluir(setor)}
+              className="flex items-center justify-center gap-2 border border-red-200 px-4 py-3 text-sm font-bold text-red-700 hover:bg-red-50 lg:py-2.5"
+            >
+              <FiTrash2 size={16} />
+              Excluir
+            </button>
+          )}
         </div>
       </div>
+    </article>
+  );
+}
+
+function Campo({ label, children }) {
+  return (
+    <div>
+      <label className="mb-1 block text-sm font-semibold text-slate-700">
+        {label}
+      </label>
+      {children}
     </div>
   );
 }
 
-export default function SetoresPage({ aoVerDetalhes }) {
+export default function SetoresPage({ aoVerDetalhes, permissoes }) {
   const [setores, setSetores] = useState([]);
   const [formulario, setFormulario] = useState(formularioInicial);
   const [editandoId, setEditandoId] = useState(null);
@@ -143,6 +182,19 @@ export default function SetoresPage({ aoVerDetalhes }) {
   const [carregando, setCarregando] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [aviso, setAviso] = useState(null);
+  const [modalCadastroAberto, setModalCadastroAberto] = useState(false);
+
+  const podeEditar = permissoes?.podeGerenciarSetores ?? true;
+  const podeExcluir = permissoes?.podeExcluir ?? true;
+
+  const resumo = useMemo(() => {
+    const total = setores.length;
+    const computadores = setores.reduce((soma, setor) => soma + Number(setor.total_computadores || 0), 0);
+    const equipamentos = setores.reduce((soma, setor) => soma + Number(setor.total_equipamentos || 0), 0);
+    const semResponsavel = setores.filter((setor) => !setor.responsavel).length;
+
+    return { total, computadores, equipamentos, semResponsavel };
+  }, [setores]);
 
   async function carregarSetores(termoBusca = busca) {
     setCarregando(true);
@@ -153,14 +205,9 @@ export default function SetoresPage({ aoVerDetalhes }) {
         : "";
 
       const dados = await apiRequest(`/setores/${query}`);
-
       setSetores(dados.resultados || []);
     } catch (erro) {
-      setAviso({
-        tipo: "erro",
-        titulo: "Erro ao carregar setores",
-        texto: erro.message,
-      });
+      setAviso({ tipo: "erro", titulo: "Erro ao carregar setores", texto: erro.message });
     } finally {
       setCarregando(false);
     }
@@ -188,6 +235,21 @@ export default function SetoresPage({ aoVerDetalhes }) {
     setEditandoId(null);
   }
 
+  function abrirNovoSetor() {
+    limparFormulario();
+    setAviso(null);
+    setModalCadastroAberto(true);
+  }
+
+  function fecharModalCadastro() {
+    if (salvando) {
+      return;
+    }
+
+    limparFormulario();
+    setModalCadastroAberto(false);
+  }
+
   async function salvarSetor(evento) {
     evento.preventDefault();
 
@@ -195,11 +257,7 @@ export default function SetoresPage({ aoVerDetalhes }) {
     setAviso(null);
 
     const editando = Boolean(editandoId);
-
-    const endpoint = editando
-      ? `/setores/${editandoId}/`
-      : "/setores/";
-
+    const endpoint = editando ? `/setores/${editandoId}/` : "/setores/";
     const metodo = editando ? "PUT" : "POST";
 
     try {
@@ -215,6 +273,7 @@ export default function SetoresPage({ aoVerDetalhes }) {
       });
 
       limparFormulario();
+      setModalCadastroAberto(false);
       setBusca("");
       await carregarSetores("");
     } catch (erro) {
@@ -225,15 +284,10 @@ export default function SetoresPage({ aoVerDetalhes }) {
           texto: erro.dados?.erro || "Já existe um setor cadastrado com esse nome.",
           setor: erro.dados?.setor || null,
         });
-
         return;
       }
 
-      setAviso({
-        tipo: "erro",
-        titulo: "Não foi possível salvar",
-        texto: erro.message,
-      });
+      setAviso({ tipo: "erro", titulo: "Não foi possível salvar", texto: erro.message });
     } finally {
       setSalvando(false);
     }
@@ -241,6 +295,7 @@ export default function SetoresPage({ aoVerDetalhes }) {
 
   function editarSetor(setor) {
     setEditandoId(setor.id);
+    setAviso(null);
 
     setFormulario({
       nome: setor.nome || "",
@@ -248,10 +303,7 @@ export default function SetoresPage({ aoVerDetalhes }) {
       observacoes: setor.observacoes || "",
     });
 
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
+    setModalCadastroAberto(true);
   }
 
   async function excluirSetor(setor) {
@@ -268,250 +320,202 @@ export default function SetoresPage({ aoVerDetalhes }) {
         method: "DELETE",
       });
 
-      setAviso({
-        tipo: "sucesso",
-        titulo: "Setor removido",
-        texto: dados.mensagem,
-      });
-
+      setAviso({ tipo: "sucesso", titulo: "Setor removido", texto: dados.mensagem });
       await carregarSetores();
     } catch (erro) {
-      setAviso({
-        tipo: "erro",
-        titulo: "Erro ao remover",
-        texto: erro.message,
-      });
+      setAviso({ tipo: "erro", titulo: "Erro ao remover", texto: erro.message });
     }
   }
 
   return (
-    <div className="mx-auto max-w-7xl">
-      <Aviso aviso={aviso} onFechar={() => setAviso(null)} />
+    <div className="mx-auto max-w-[1500px]">
+      {!modalCadastroAberto && <Aviso aviso={aviso} onFechar={() => setAviso(null)} />}
 
-      <section className="grid gap-6 xl:grid-cols-[420px_1fr]">
-        <div className="border border-slate-200 bg-white">
-          <div className="border-b border-slate-200 px-4 py-4 sm:px-5">
-            <h2 className="text-base font-bold text-slate-950">
-              {editandoId ? "Editar setor" : "Novo setor"}
-            </h2>
-
-            <p className="mt-1 text-sm text-slate-500">
-              Cadastre setores, locais ou departamentos usados no inventário.
-            </p>
-          </div>
-
-          <form onSubmit={salvarSetor} className="space-y-4 p-4 sm:p-5">
-            <div>
-              <label className="mb-1 block text-sm font-semibold text-slate-700">
-                Nome do setor
-              </label>
-
-              <input
-                type="text"
-                name="nome"
-                value={formulario.nome}
-                onChange={atualizarCampo}
-                placeholder="Ex: Administrativo"
-                className="w-full border border-slate-300 bg-white px-3 py-3 text-sm outline-none focus:border-slate-950 sm:py-2.5"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-sm font-semibold text-slate-700">
-                Responsável
-              </label>
-
-              <input
-                type="text"
-                name="responsavel"
-                value={formulario.responsavel}
-                onChange={atualizarCampo}
-                placeholder="Ex: João Silva"
-                className="w-full border border-slate-300 bg-white px-3 py-3 text-sm outline-none focus:border-slate-950 sm:py-2.5"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-sm font-semibold text-slate-700">
-                Observações
-              </label>
-
-              <textarea
-                name="observacoes"
-                value={formulario.observacoes}
-                onChange={atualizarCampo}
-                placeholder="Ex: sala administrativa, setor financeiro, almoxarifado..."
-                rows={5}
-                className="w-full resize-none border border-slate-300 bg-white px-3 py-3 text-sm outline-none focus:border-slate-950 sm:py-2.5"
-              />
-            </div>
-
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <button
-                type="submit"
-                disabled={salvando}
-                className="flex-1 bg-slate-950 px-4 py-3 text-sm font-bold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {salvando
-                  ? "Salvando..."
-                  : editandoId
-                    ? "Atualizar setor"
-                    : "Cadastrar setor"}
-              </button>
-
-              {editandoId && (
-                <button
-                  type="button"
-                  onClick={limparFormulario}
-                  className="border border-slate-300 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-100"
-                >
-                  Cancelar
-                </button>
-              )}
-            </div>
-          </form>
+      <div className="mb-5 flex flex-col gap-4 border border-slate-200 bg-white p-4 sm:p-5 xl:flex-row xl:items-center xl:justify-between">
+        <div>
+          <h2 className="text-lg font-black text-slate-950">
+            Setores cadastrados
+          </h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Visualização rápida dos setores, responsáveis e vínculos do inventário.
+          </p>
         </div>
 
-        <div className="border border-slate-200 bg-white">
-          <div className="flex flex-col gap-4 border-b border-slate-200 px-4 py-4 sm:px-5 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <h2 className="text-base font-bold text-slate-950">
-                Setores cadastrados
-              </h2>
-
-              <p className="mt-1 text-sm text-slate-500">
-                Total encontrado: {setores.length}
-              </p>
-            </div>
-
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="relative sm:w-96">
+            <FiSearch size={17} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
               value={busca}
               onChange={(evento) => setBusca(evento.target.value)}
               placeholder="Buscar por setor, responsável ou observação..."
-              className="w-full border border-slate-300 bg-white px-3 py-3 text-sm outline-none focus:border-slate-950 lg:max-w-xs lg:py-2.5"
+              className="w-full border border-slate-300 bg-white py-3 pl-10 pr-3 text-sm outline-none focus:border-slate-950 sm:py-2.5"
             />
           </div>
 
-          <div className="p-4 lg:hidden">
-            {carregando && (
-              <div className="border border-slate-200 bg-slate-50 p-5 text-center text-sm text-slate-500">
-                Carregando setores...
-              </div>
-            )}
+          {podeEditar && (
+            <button
+              type="button"
+              onClick={abrirNovoSetor}
+              className="flex items-center justify-center gap-2 bg-slate-950 px-4 py-3 text-sm font-bold text-white hover:bg-slate-800 sm:py-2.5"
+            >
+              <FiPlus size={17} />
+              Novo setor
+            </button>
+          )}
+        </div>
+      </div>
 
-            {!carregando && setores.length === 0 && (
-              <div className="border border-slate-200 bg-slate-50 p-5 text-center text-sm text-slate-500">
-                Nenhum setor cadastrado ainda.
-              </div>
-            )}
+      <div className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <ResumoCard titulo="Total" valor={resumo.total} descricao="Setores na lista" icone={FiMapPin} />
+        <ResumoCard titulo="Computadores" valor={resumo.computadores} descricao="Vinculados aos setores" icone={FiMonitor} />
+        <ResumoCard titulo="Equipamentos" valor={resumo.equipamentos} descricao="Patrimônios vinculados" icone={FiPackage} />
+        <ResumoCard titulo="Sem responsável" valor={resumo.semResponsavel} descricao="Setores sem responsável" icone={FiUsers} />
+      </div>
 
-            {!carregando && setores.length > 0 && (
-              <div className="space-y-4">
-                {setores.map((setor) => (
-                  <SetorCardMobile
-                    key={setor.id}
-                    setor={setor}
-                    aoVerDetalhes={aoVerDetalhes}
-                    aoEditar={editarSetor}
-                    aoExcluir={excluirSetor}
-                  />
-                ))}
-              </div>
-            )}
+      <section className="border border-slate-200 bg-white">
+        <div className="flex flex-col gap-2 border-b border-slate-200 px-4 py-4 sm:px-5 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h3 className="text-base font-black text-slate-950">Lista de setores</h3>
+            <p className="mt-1 text-sm text-slate-500">Total encontrado: {setores.length}</p>
           </div>
+          {carregando && <div className="text-sm font-semibold text-slate-500">Carregando...</div>}
+        </div>
 
-          <div className="hidden overflow-x-auto lg:block">
-            <table className="min-w-full text-left text-sm">
-              <thead className="bg-slate-100 text-xs uppercase tracking-wide text-slate-500">
-                <tr>
-                  <th className="px-5 py-3">Setor</th>
-                  <th className="px-5 py-3">Responsável</th>
-                  <th className="px-5 py-3">Computadores</th>
-                  <th className="px-5 py-3">Equipamentos</th>
-                  <th className="px-5 py-3">Observações</th>
-                  <th className="px-5 py-3">Atualizado</th>
-                  <th className="px-5 py-3 text-right">Ações</th>
-                </tr>
-              </thead>
+        <div className="space-y-4 bg-slate-50/60 p-4 sm:p-5">
+          {carregando && setores.length === 0 && (
+            <div className="border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">Carregando setores...</div>
+          )}
 
-              <tbody>
-                {carregando && (
-                  <tr>
-                    <td colSpan="7" className="px-5 py-8 text-center text-slate-500">
-                      Carregando setores...
-                    </td>
-                  </tr>
-                )}
+          {!carregando && setores.length === 0 && (
+            <div className="border border-slate-200 bg-white p-8 text-center">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center text-slate-400">
+                <FiMapPin size={26} />
+              </div>
+              <p className="mt-4 text-sm font-bold text-slate-800">Nenhum setor encontrado.</p>
+              <p className="mt-1 text-sm text-slate-500">Cadastre um novo setor ou ajuste a busca.</p>
+            </div>
+          )}
 
-                {!carregando && setores.length === 0 && (
-                  <tr>
-                    <td colSpan="7" className="px-5 py-8 text-center text-slate-500">
-                      Nenhum setor cadastrado ainda.
-                    </td>
-                  </tr>
-                )}
-
-                {!carregando && setores.map((setor) => (
-                  <tr key={setor.id} className="border-t border-slate-100 hover:bg-slate-50">
-                    <td className="px-5 py-4 font-semibold text-slate-950">
-                      {setor.nome}
-                    </td>
-
-                    <td className="px-5 py-4 text-slate-700">
-                      {setor.responsavel || "-"}
-                    </td>
-
-                    <td className="px-5 py-4 text-slate-700">
-                      {setor.total_computadores}
-                    </td>
-
-                    <td className="px-5 py-4 text-slate-700">
-                      {setor.total_equipamentos}
-                    </td>
-
-                    <td className="max-w-xs px-5 py-4 text-slate-600">
-                      {setor.observacoes || "-"}
-                    </td>
-
-                    <td className="px-5 py-4 text-slate-500">
-                      {setor.atualizado_em}
-                    </td>
-
-                    <td className="px-5 py-4">
-                      <div className="flex justify-end gap-2">
-                        <button
-                          type="button"
-                          onClick={() => aoVerDetalhes?.(setor.id)}
-                          className="border border-slate-900 bg-slate-900 px-3 py-2 text-xs font-bold text-white hover:bg-slate-700"
-                        >
-                          Ver detalhes
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => editarSetor(setor)}
-                          className="border border-slate-300 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100"
-                        >
-                          Editar
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => excluirSetor(setor)}
-                          className="border border-red-200 px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-50"
-                        >
-                          Excluir
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {setores.map((setor) => (
+            <SetorCard
+              key={setor.id}
+              setor={setor}
+              aoVerDetalhes={aoVerDetalhes}
+              aoEditar={editarSetor}
+              aoExcluir={excluirSetor}
+              podeEditar={podeEditar}
+              podeExcluir={podeExcluir}
+            />
+          ))}
         </div>
       </section>
+
+      {modalCadastroAberto && (
+        <div className="fixed inset-0 z-50 bg-black/50">
+          <div className="absolute inset-0" onClick={fecharModalCadastro} />
+
+          <div className="absolute inset-y-0 right-0 flex w-full justify-end">
+            <div className="relative flex h-full w-full max-w-2xl flex-col bg-[#f4f5f7] shadow-2xl">
+              <div className="sticky top-0 z-10 border-b border-slate-200 bg-white px-4 py-4 sm:px-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h2 className="text-lg font-black text-slate-950">
+                      {editandoId ? "Editar setor" : "Novo setor"}
+                    </h2>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Cadastre setores, locais ou departamentos usados no inventário.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={fecharModalCadastro}
+                    className="flex h-10 w-10 shrink-0 items-center justify-center border border-slate-200 text-slate-600 hover:bg-slate-100"
+                    title="Fechar"
+                  >
+                    <FiX size={20} />
+                  </button>
+                </div>
+              </div>
+
+              <form onSubmit={salvarSetor} className="flex min-h-0 flex-1 flex-col">
+                <div className="flex-1 overflow-y-auto p-4 sm:p-5">
+                  <Aviso aviso={aviso} onFechar={() => setAviso(null)} />
+
+                  <div className="space-y-5 pb-8">
+                    <section className="border border-slate-200 bg-white">
+                      <div className="border-b border-slate-200 px-4 py-4">
+                        <h3 className="text-sm font-black text-slate-950">Dados do setor</h3>
+                      </div>
+
+                      <div className="space-y-4 p-4">
+                        <Campo label="Nome do setor">
+                          <input
+                            type="text"
+                            name="nome"
+                            value={formulario.nome}
+                            onChange={atualizarCampo}
+                            placeholder="Ex: Administrativo"
+                            className={inputClasse}
+                          />
+                        </Campo>
+
+                        <Campo label="Responsável">
+                          <input
+                            type="text"
+                            name="responsavel"
+                            value={formulario.responsavel}
+                            onChange={atualizarCampo}
+                            placeholder="Ex: João Silva"
+                            className={inputClasse}
+                          />
+                        </Campo>
+
+                        <Campo label="Observações">
+                          <textarea
+                            name="observacoes"
+                            value={formulario.observacoes}
+                            onChange={atualizarCampo}
+                            placeholder="Ex: sala administrativa, setor financeiro, almoxarifado..."
+                            rows={5}
+                            className="w-full resize-none border border-slate-300 bg-white px-3 py-3 text-sm outline-none focus:border-slate-950 sm:py-2.5"
+                          />
+                        </Campo>
+                      </div>
+                    </section>
+                  </div>
+                </div>
+
+                <div className="border-t border-slate-200 bg-white px-4 py-4 sm:px-5">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                    <button
+                      type="button"
+                      onClick={fecharModalCadastro}
+                      disabled={salvando}
+                      className="border border-slate-300 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-100 disabled:opacity-60 sm:min-w-32"
+                    >
+                      Cancelar
+                    </button>
+
+                    <button
+                      type="submit"
+                      disabled={salvando}
+                      className="bg-slate-950 px-4 py-3 text-sm font-bold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 sm:min-w-52"
+                    >
+                      {salvando
+                        ? "Salvando..."
+                        : editandoId
+                          ? "Atualizar setor"
+                          : "Cadastrar setor"}
+                    </button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
