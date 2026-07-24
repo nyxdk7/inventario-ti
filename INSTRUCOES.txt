@@ -1,0 +1,25 @@
+Pacote: melhoria da tela de Equipamentos
+
+Arquivo alterado:
+frontend/src/pages/EquipamentosPage.tsx
+
+Como aplicar no Windows/PowerShell:
+1) Extraia o ZIP na raiz do projeto: C:\projetos\inventario-ti
+2) O arquivo deve substituir: C:\projetos\inventario-ti\frontend\src\pages\EquipamentosPage.tsx
+3) Teste localmente:
+   cd C:\projetos\inventario-ti\frontend
+   npm install
+   npm run build
+
+Depois subir:
+   cd C:\projetos\inventario-ti
+   git add .
+   git commit -m "Melhora interface da tela de equipamentos"
+   git push
+
+Na VPS:
+   cd /var/www/inventario-ti
+   git pull
+   cd /var/www/inventario-ti/frontend
+   npm run build
+   systemctl reload nginx
