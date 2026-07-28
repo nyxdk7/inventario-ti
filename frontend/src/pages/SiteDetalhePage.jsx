@@ -155,7 +155,7 @@ function RackVisual({ site, lado, ativoSelecionadoId, aoSelecionar }) {
           <span>{lado === "frente" ? "Vista frontal" : "Vista traseira"}</span>
         </div>
 
-        <div className="relative border border-slate-700 bg-slate-900" style={{ height }}>
+        <div className="relative border border-slate-700 bg-slate-900" style={{ height: altura }}>
           {linhas.map((numero, indice) => (
             <div key={numero} className="absolute left-0 right-0 border-t border-slate-700/70" style={{ top: indice * unidadePx, height: unidadePx }}>
               <span className="absolute left-1 top-1 text-[9px] font-bold text-slate-500">U{numero}</span>
