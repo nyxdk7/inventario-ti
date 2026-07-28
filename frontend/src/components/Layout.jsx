@@ -9,7 +9,6 @@ import {
   FiGrid,
   FiHardDrive,
   FiKey,
-  FiLayers,
   FiLogOut,
   FiMap,
   FiMenu,
@@ -77,8 +76,8 @@ function subtituloPagina(paginaAtual) {
   if (paginaAtual === "site_detalhe") return "Rack, switches, patch panels e demais equipamentos organizados dentro do site";
   if (paginaAtual === "switches") return "Cadastro e mapa físico dos switches da infraestrutura";
   if (paginaAtual === "switch_detalhe") return "Controle de ocupação, dispositivos, IP, MAC, VLAN e responsáveis por porta";
-  if (paginaAtual === "starlinks") return "Assinaturas, equipamentos, locais, responsáveis e preparação para telemetria";
-  if (paginaAtual === "starlink_detalhe") return "Visão geral, assinatura, equipamento e dados preparados para integração";
+  if (paginaAtual === "starlinks") return "Assinaturas, equipamentos, locais, responsáveis e conectividade";
+  if (paginaAtual === "starlink_detalhe") return "Visão geral da assinatura, equipamento, telemetria e integração";
   if (paginaAtual === "manutencoes") return "Registros de manutenção, movimentação, limpeza, baixa e observações";
   if (paginaAtual === "relatorios") return "Exportação de dados em Excel e PDF";
   if (paginaAtual === "usuarios") return "Gerenciamento de acesso por perfil de usuário";
@@ -122,15 +121,11 @@ export default function Layout({
       paginaAtual === "backups" ||
       paginaAtual === "configuracoes"
   );
-  const [infraestruturaAberta, setInfraestruturaAberta] = useState(
-    paginaAtual === "starlinks" || paginaAtual === "starlink_detalhe"
-  );
 
   const equipamentosAtivo = paginaAtual === "equipamentos" || paginaAtual === "equipamento_detalhe";
   const sitesAtivo = paginaAtual === "sites" || paginaAtual === "site_detalhe";
   const switchesAtivo = paginaAtual === "switches" || paginaAtual === "switch_detalhe";
   const starlinksAtivo = paginaAtual === "starlinks" || paginaAtual === "starlink_detalhe";
-  const infraestruturaAtiva = starlinksAtivo;
   const setoresAtivo = paginaAtual === "setores" || paginaAtual === "setor_detalhe";
   const administradorAtivo = paginaAtual === "usuarios" || paginaAtual === "backups" || paginaAtual === "configuracoes";
 
@@ -139,12 +134,6 @@ export default function Layout({
       setAdminAberto(true);
     }
   }, [administradorAtivo]);
-
-  useEffect(() => {
-    if (infraestruturaAtiva) {
-      setInfraestruturaAberta(true);
-    }
-  }, [infraestruturaAtiva]);
 
   function navegar(pagina) {
     aoTrocarPagina(pagina);
@@ -159,16 +148,6 @@ export default function Layout({
     }
 
     setAdminAberto((estadoAtual) => !estadoAtual);
-  }
-
-  function alternarInfraestrutura(mobile = false) {
-    if (!mobile && !menuAberto) {
-      setMenuAberto(true);
-      setInfraestruturaAberta(true);
-      return;
-    }
-
-    setInfraestruturaAberta((estadoAtual) => !estadoAtual);
   }
 
   function MenuConteudo({ mobile = false }) {
@@ -241,30 +220,10 @@ export default function Layout({
             {menuExpandido && <span>Sites</span>}
           </button>
 
-          <div className="mt-2">
-            <button
-              type="button"
-              onClick={() => alternarInfraestrutura(mobile)}
-              className={itemClasse(infraestruturaAtiva)}
-            >
-              <span className={iconeClasse(infraestruturaAtiva)}><FiLayers size={18} /></span>
-              {menuExpandido && (
-                <>
-                  <span className="flex-1">Infraestrutura</span>
-                  <FiChevronDown size={16} className={`transition-transform ${infraestruturaAberta ? "rotate-180" : ""}`} />
-                </>
-              )}
-            </button>
-
-            {infraestruturaAberta && menuExpandido && (
-              <div className="mt-1 space-y-1 border-l border-white/10 pl-2">
-                <button type="button" onClick={() => navegar("starlinks")} className={subItemClasse(starlinksAtivo)}>
-                  <FiWifi size={16} />
-                  <span>Starlink</span>
-                </button>
-              </div>
-            )}
-          </div>
+          <button type="button" onClick={() => navegar("starlinks")} className={`${itemClasse(starlinksAtivo)} mt-2`}>
+            <span className={iconeClasse(starlinksAtivo)}><FiWifi size={18} /></span>
+            {menuExpandido && <span>Starlink</span>}
+          </button>
 
           <button type="button" onClick={() => navegar("manutencoes")} className={`${itemClasse(paginaAtual === "manutencoes")} mt-2`}>
             <span className={iconeClasse(paginaAtual === "manutencoes")}><FiTool size={18} /></span>

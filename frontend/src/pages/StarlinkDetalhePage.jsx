@@ -238,9 +238,6 @@ export default function StarlinkDetalhePage({ starlinkId, aoVoltar }) {
 
         {aba === "telemetria" && (
           <div className="space-y-4">
-            <div className="border border-sky-200 bg-sky-50 p-4 text-sm text-sky-800">
-              A estrutura de telemetria está pronta. Os valores serão preenchidos quando a API oficial for configurada.
-            </div>
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               <Metrica titulo="Status da conexão" valor={telemetria.status_conexao_display || "Desconhecido"} />
               <Metrica titulo="Download" valor={telemetria.download_mbps} unidade="Mb/s" />

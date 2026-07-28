@@ -83,6 +83,29 @@ function tipoConfig(tipo) {
   return configuracoes[tipo] || configuracoes.outro;
 }
 
+function resumoVisualAtivo(ativo) {
+  if (ativo.tipo === "switch" && ativo.switch_rede) {
+    return [
+      `${ativo.switch_rede.quantidade_portas || 0} portas`,
+      ativo.switch_rede.ip_gerenciamento || ativo.ip_gerenciamento,
+    ].filter(Boolean).join(" · ");
+  }
+
+  if (ativo.tipo === "patch_panel" && ativo.patch_panel) {
+    return [
+      `${ativo.patch_panel.quantidade_portas || 0} portas`,
+      ativo.patch_panel.categoria_display,
+      ativo.patch_panel.identificacao,
+    ].filter(Boolean).join(" · ");
+  }
+
+  return [
+    [ativo.marca, ativo.modelo].filter(Boolean).join(" "),
+    ativo.ip_gerenciamento,
+    ativo.patrimonio ? `Pat. ${ativo.patrimonio}` : "",
+  ].filter(Boolean).join(" · ") || ativo.tipo_display;
+}
+
 function badgeStatus(status) {
   const classes = {
     ativo: "border-emerald-200 bg-emerald-50 text-emerald-700",
@@ -169,6 +192,15 @@ function RackVisual({ site, lado, ativoSelecionadoId, aoSelecionar }) {
             const bottom = (Number(ativo.posicao_u || 1) - 1) * unidadePx;
             const alturaAtivo = Number(ativo.altura_u || 1) * unidadePx - 2;
             const selecionado = ativoSelecionadoId === ativo.id;
+            const resumo = resumoVisualAtivo(ativo);
+            const faixaU = `U${ativo.posicao_u}${Number(ativo.altura_u) > 1 ? `–${ativo.posicao_u_final}` : ""}`;
+            const detalhesTooltip = [
+              ativo.nome,
+              ativo.tipo_display,
+              resumo,
+              faixaU,
+              ativo.status_display,
+            ].filter(Boolean).join(" · ");
             return (
               <button
                 key={ativo.id}
@@ -176,19 +208,22 @@ function RackVisual({ site, lado, ativoSelecionadoId, aoSelecionar }) {
                 onClick={() => aoSelecionar(ativo)}
                 className={`absolute left-10 right-10 overflow-hidden border text-left shadow-md transition ${config.classe} ${selecionado ? "ring-2 ring-white ring-offset-2 ring-offset-slate-950" : "hover:brightness-110"}`}
                 style={{ bottom, height: alturaAtivo }}
-                title={`${ativo.nome} — U${ativo.posicao_u} até U${ativo.posicao_u_final}`}
+                title={detalhesTooltip}
               >
-                <div className="flex h-full items-center gap-3 px-3">
+                <div className="flex h-full items-center gap-2 px-3">
                   <Icone size={Math.min(20 + Number(ativo.altura_u || 1) * 2, 30)} className="shrink-0 opacity-90" />
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="truncate text-xs font-black uppercase tracking-wide sm:text-sm">{ativo.nome}</p>
+                    <div className="flex min-w-0 items-center gap-2">
+                      <p className="max-w-[42%] shrink-0 truncate text-xs font-black uppercase tracking-wide sm:text-sm">{ativo.nome}</p>
                       <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${config.detalhe}`} />
+                      {alturaAtivo < 48 && (
+                        <p className="min-w-0 flex-1 truncate text-[9px] font-semibold opacity-75">{resumo}</p>
+                      )}
                     </div>
                     {alturaAtivo >= 48 && (
-                      <p className="mt-0.5 truncate text-[10px] opacity-75">{ativo.tipo_display} · {[ativo.marca, ativo.modelo].filter(Boolean).join(" ") || "Sem modelo"}</p>
+                      <p className="mt-0.5 truncate text-[10px] opacity-80">{ativo.tipo_display} · {resumo}</p>
                     )}
-                    {ativo.tipo === "patch_panel" && alturaAtivo >= 25 && (
+                    {ativo.tipo === "patch_panel" && alturaAtivo >= 48 && (
                       <div className="mt-1 flex flex-wrap gap-0.5">
                         {Array.from({ length: Math.min(ativo.patch_panel?.quantidade_portas || 0, 24) }).map((_, indice) => {
                           const porta = ativo.patch_panel?.portas?.[indice];
@@ -196,7 +231,7 @@ function RackVisual({ site, lado, ativoSelecionadoId, aoSelecionar }) {
                         })}
                       </div>
                     )}
-                    {ativo.tipo === "switch" && alturaAtivo >= 25 && (
+                    {ativo.tipo === "switch" && alturaAtivo >= 48 && (
                       <div className="mt-1 flex gap-0.5">
                         {Array.from({ length: Math.min(ativo.switch_rede?.quantidade_portas || 12, 12) }).map((_, indice) => (
                           <span key={indice} className={`h-1.5 w-2 border border-white/20 ${indice < (ativo.switch_rede?.resumo_portas?.ativas || 0) ? "bg-emerald-400" : "bg-slate-600"}`} />
@@ -204,7 +239,7 @@ function RackVisual({ site, lado, ativoSelecionadoId, aoSelecionar }) {
                       </div>
                     )}
                   </div>
-                  <span className="shrink-0 text-[10px] font-bold opacity-75">U{ativo.posicao_u}{Number(ativo.altura_u) > 1 ? `–${ativo.posicao_u_final}` : ""}</span>
+                  <span className="shrink-0 text-[10px] font-bold opacity-75">{faixaU}</span>
                 </div>
               </button>
             );
@@ -645,21 +680,7 @@ export default function SiteDetalhePage({ siteId, aoVoltar, aoAbrirSwitch, permi
         </div>
       )}
 
-      <div className="mt-4 grid gap-4 xl:grid-cols-2">
-        <div className="border border-slate-200 bg-white p-5">
-          <h3 className="font-black text-slate-950">Informações do site</h3>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <Info titulo="Código" valor={site.codigo} />
-            <Info titulo="Setor" valor={site.setor?.nome} />
-            <Info titulo="Localização" valor={site.localizacao} />
-            <Info titulo="Responsável" valor={site.responsavel} />
-          </div>
-        </div>
-        <div className="border border-slate-200 bg-white p-5">
-          <h3 className="font-black text-slate-950">Observações</h3>
-          <p className="mt-4 whitespace-pre-wrap text-sm leading-6 text-slate-600">{site.observacoes || "Nenhuma observação cadastrada."}</p>
-        </div>
-      </div>
+
 
       {modalAtivoAberto && (
         <div className="fixed inset-0 z-50 flex justify-end bg-slate-950/50">
