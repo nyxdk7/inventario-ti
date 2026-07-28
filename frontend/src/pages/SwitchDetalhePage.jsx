@@ -180,7 +180,7 @@ function LinhaPorta({ porta, aoSelecionar }) {
   );
 }
 
-export default function SwitchDetalhePage({ switchId, aoVoltar, permissoes }) {
+export default function SwitchDetalhePage({ switchId, aoVoltar, voltarParaSite = false, permissoes }) {
   const [dados, setDados] = useState(null);
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
@@ -341,7 +341,7 @@ export default function SwitchDetalhePage({ switchId, aoVoltar, permissoes }) {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <button type="button" onClick={aoVoltar} className="mb-3 flex items-center gap-2 text-sm font-bold text-slate-600 hover:text-slate-950">
-            <FiArrowLeft size={17} /> Voltar para switches
+            <FiArrowLeft size={17} /> {voltarParaSite ? "Voltar para o site" : "Voltar"}
           </button>
           <div className="flex flex-wrap items-center gap-3">
             <FiServer size={25} className="text-slate-400" />

@@ -56,7 +56,7 @@ function tituloPagina(paginaAtual) {
   if (paginaAtual === "sites") return "Sites e racks";
   if (paginaAtual === "site_detalhe") return "Mapa físico do rack";
   if (paginaAtual === "switches") return "Switches de rede";
-  if (paginaAtual === "switch_detalhe") return "Mapa de portas do switch";
+  if (paginaAtual === "switch_detalhe") return "Switch do site — mapa de portas";
   if (paginaAtual === "starlinks") return "Gestão de Starlinks";
   if (paginaAtual === "starlink_detalhe") return "Detalhes da Starlink";
   if (paginaAtual === "manutencoes") return "Histórico e manutenções";
@@ -74,7 +74,7 @@ function subtituloPagina(paginaAtual) {
   if (paginaAtual === "equipamentos") return "Cadastro de patrimônio, marca, modelo, série, setor e status";
   if (paginaAtual === "equipamento_detalhe") return "Visão completa do patrimônio, fotos, compra e histórico";
   if (paginaAtual === "sites") return "Cadastro dos racks e visão dos ativos instalados em cada local";
-  if (paginaAtual === "site_detalhe") return "Representação física em U, switches, patch panels, roteadores e demais ativos";
+  if (paginaAtual === "site_detalhe") return "Rack, switches, patch panels e demais equipamentos organizados dentro do site";
   if (paginaAtual === "switches") return "Cadastro e mapa físico dos switches da infraestrutura";
   if (paginaAtual === "switch_detalhe") return "Controle de ocupação, dispositivos, IP, MAC, VLAN e responsáveis por porta";
   if (paginaAtual === "starlinks") return "Assinaturas, equipamentos, locais, responsáveis e preparação para telemetria";
@@ -123,17 +123,14 @@ export default function Layout({
       paginaAtual === "configuracoes"
   );
   const [infraestruturaAberta, setInfraestruturaAberta] = useState(
-    paginaAtual === "switches" ||
-      paginaAtual === "switch_detalhe" ||
-      paginaAtual === "starlinks" ||
-      paginaAtual === "starlink_detalhe"
+    paginaAtual === "starlinks" || paginaAtual === "starlink_detalhe"
   );
 
   const equipamentosAtivo = paginaAtual === "equipamentos" || paginaAtual === "equipamento_detalhe";
   const sitesAtivo = paginaAtual === "sites" || paginaAtual === "site_detalhe";
   const switchesAtivo = paginaAtual === "switches" || paginaAtual === "switch_detalhe";
   const starlinksAtivo = paginaAtual === "starlinks" || paginaAtual === "starlink_detalhe";
-  const infraestruturaAtiva = switchesAtivo || starlinksAtivo;
+  const infraestruturaAtiva = starlinksAtivo;
   const setoresAtivo = paginaAtual === "setores" || paginaAtual === "setor_detalhe";
   const administradorAtivo = paginaAtual === "usuarios" || paginaAtual === "backups" || paginaAtual === "configuracoes";
 
@@ -261,11 +258,6 @@ export default function Layout({
 
             {infraestruturaAberta && menuExpandido && (
               <div className="mt-1 space-y-1 border-l border-white/10 pl-2">
-                <button type="button" onClick={() => navegar("switches")} className={subItemClasse(switchesAtivo)}>
-                  <FiServer size={16} />
-                  <span>Switches</span>
-                </button>
-
                 <button type="button" onClick={() => navegar("starlinks")} className={subItemClasse(starlinksAtivo)}>
                   <FiWifi size={16} />
                   <span>Starlink</span>

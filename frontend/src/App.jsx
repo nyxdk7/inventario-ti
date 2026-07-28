@@ -54,6 +54,7 @@ export default function App() {
   const [setorDetalheId, setSetorDetalheId] = useState(null);
   const [siteDetalheId, setSiteDetalheId] = useState(null);
   const [switchDetalheId, setSwitchDetalheId] = useState(null);
+  const [switchOrigemSiteId, setSwitchOrigemSiteId] = useState(null);
   const [starlinkDetalheId, setStarlinkDetalheId] = useState(null);
   const [usuario, setUsuario] = useState(null);
   const [carregandoSessao, setCarregandoSessao] = useState(true);
@@ -166,6 +167,7 @@ export default function App() {
 
     if (pagina !== "switch_detalhe") {
       setSwitchDetalheId(null);
+      setSwitchOrigemSiteId(null);
     }
 
     if (pagina !== "starlink_detalhe") {
@@ -208,15 +210,18 @@ export default function App() {
     setPaginaAtual("site_detalhe");
   }
 
-  function abrirDetalhesSwitch(switchId) {
+  function abrirDetalhesSwitch(switchId, siteOrigemId = null) {
     if (usuarioPrecisaTrocarSenha(usuario)) {
       return;
     }
 
     setSwitchDetalheId(switchId);
+    setSwitchOrigemSiteId(siteOrigemId);
     setEquipamentoDetalheId(null);
     setSetorDetalheId(null);
-    setSiteDetalheId(null);
+    if (!siteOrigemId) {
+      setSiteDetalheId(null);
+    }
     setPaginaAtual("switch_detalhe");
   }
 
@@ -342,7 +347,17 @@ export default function App() {
       return (
         <SwitchDetalhePage
           switchId={switchDetalheId}
-          aoVoltar={() => trocarPagina("switches")}
+          aoVoltar={() => {
+            if (switchOrigemSiteId) {
+              setSiteDetalheId(switchOrigemSiteId);
+              setSwitchDetalheId(null);
+              setSwitchOrigemSiteId(null);
+              setPaginaAtual("site_detalhe");
+              return;
+            }
+            trocarPagina("sites");
+          }}
+          voltarParaSite={Boolean(switchOrigemSiteId)}
           permissoes={permissoes}
         />
       );

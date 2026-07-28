@@ -42,8 +42,9 @@ def inteiro_positivo(valor, nome, minimo=1, maximo=None):
         raise ValueError(f"Informe um valor válido para {nome}.")
 
     if numero < minimo or (maximo is not None and numero > maximo):
-        limite = f" entre {minimo} e {maximo}" if maximo is not None else f" maior ou igual a {minimo}"
-        raise ValueError(f"Informe {nome}{limite}.")
+        if maximo is None:
+            raise ValueError(f"Informe {nome} maior ou igual a {minimo}.")
+        raise ValueError(f"Informe {nome} entre {minimo} e {maximo}.")
     return numero
 
 
@@ -84,7 +85,7 @@ def obter_switch(valor, ativo_atual=None):
     if ativo_atual and ativo_atual.pk:
         vinculados = vinculados.exclude(pk=ativo_atual.pk)
     if vinculados.exists():
-        raise ValueError("Esse switch já está instalado em outro rack.")
+        raise ValueError("Esse switch já está instalado em outro site.")
     return switch
 
 
@@ -97,13 +98,22 @@ def obter_computador(valor):
         raise ValueError("Computador informado não foi encontrado.")
 
 
-def obter_switch_porta(valor):
+def obter_switch_porta(valor, site=None):
     if valor in [None, "", "null", "undefined"]:
         return None
     try:
-        return SwitchPorta.objects.select_related("switch").get(pk=int(valor))
+        porta = SwitchPorta.objects.select_related("switch", "switch__ativo_rack").get(pk=int(valor))
     except (TypeError, ValueError, SwitchPorta.DoesNotExist):
         raise ValueError("Porta de switch informada não foi encontrada.")
+
+    if site:
+        try:
+            site_porta = porta.switch.ativo_rack.site_id
+        except RackAtivo.DoesNotExist:
+            site_porta = None
+        if site_porta != site.id:
+            raise ValueError("Selecione uma porta de switch pertencente a este site.")
+    return porta
 
 
 def equipamento_resumo(equipamento):
@@ -116,11 +126,31 @@ def equipamento_resumo(equipamento):
     )
     return {
         "id": equipamento.id,
+        "tipo": equipamento.tipo,
         "tipo_display": tipo,
         "marca": equipamento.marca,
         "modelo": equipamento.modelo,
         "patrimonio": equipamento.patrimonio or "",
         "numero_serie": equipamento.numero_serie or "",
+    }
+
+
+def resumo_portas_switch(switch):
+    if not switch:
+        return {"total": 0, "ativas": 0, "livres": 0, "atencao": 0}
+    return {
+        "total": switch.quantidade_portas,
+        "ativas": switch.portas.filter(
+            status__in=[SwitchPorta.STATUS_ATIVA, SwitchPorta.STATUS_UPLINK]
+        ).count(),
+        "livres": switch.portas.filter(status=SwitchPorta.STATUS_LIVRE).count(),
+        "atencao": switch.portas.filter(
+            status__in=[
+                SwitchPorta.STATUS_DESCONECTADA,
+                SwitchPorta.STATUS_BLOQUEADA,
+                SwitchPorta.STATUS_DEFEITUOSA,
+            ]
+        ).count(),
     }
 
 
@@ -134,8 +164,10 @@ def switch_resumo(switch):
         "modelo": switch.modelo,
         "ip_gerenciamento": str(switch.ip_gerenciamento or ""),
         "quantidade_portas": switch.quantidade_portas,
+        "quantidade_portas_sfp": switch.quantidade_portas_sfp,
         "status": switch.status,
         "status_display": switch.get_status_display(),
+        "resumo_portas": resumo_portas_switch(switch),
     }
 
 
@@ -200,7 +232,11 @@ def ativo_para_json(ativo, detalhado=False):
         "site_id": ativo.site_id,
         "nome": ativo.nome,
         "tipo": ativo.tipo,
-        "tipo_display": ativo.tipo_outro_descricao if ativo.tipo == RackAtivo.TIPO_OUTRO and ativo.tipo_outro_descricao else ativo.get_tipo_display(),
+        "tipo_display": (
+            ativo.tipo_outro_descricao
+            if ativo.tipo == RackAtivo.TIPO_OUTRO and ativo.tipo_outro_descricao
+            else ativo.get_tipo_display()
+        ),
         "tipo_outro_descricao": ativo.tipo_outro_descricao,
         "lado": ativo.lado,
         "lado_display": ativo.get_lado_display(),
@@ -236,10 +272,10 @@ def ativo_para_json(ativo, detalhado=False):
 
 
 def site_para_json(site, detalhado=False):
-    ativos = site.ativos.select_related("equipamento", "switch_rede").all()
-    total_u = ativos.aggregate(total=Sum("altura_u"))["total"] or 0
-    usados_frente = ativos.filter(lado=RackAtivo.LADO_FRENTE).aggregate(total=Sum("altura_u"))["total"] or 0
-    usados_traseira = ativos.filter(lado=RackAtivo.LADO_TRASEIRA).aggregate(total=Sum("altura_u"))["total"] or 0
+    ativos_qs = site.ativos.select_related("equipamento", "switch_rede").all()
+    total_u = ativos_qs.aggregate(total=Sum("altura_u"))["total"] or 0
+    usados_frente = ativos_qs.filter(lado=RackAtivo.LADO_FRENTE).aggregate(total=Sum("altura_u"))["total"] or 0
+    usados_traseira = ativos_qs.filter(lado=RackAtivo.LADO_TRASEIRA).aggregate(total=Sum("altura_u"))["total"] or 0
 
     dados = {
         "id": site.id,
@@ -254,7 +290,7 @@ def site_para_json(site, detalhado=False):
         "status": site.status,
         "status_display": site.get_status_display(),
         "observacoes": site.observacoes,
-        "total_ativos": ativos.count(),
+        "total_ativos": ativos_qs.count(),
         "ocupacao": {
             "total_u_somado": total_u,
             "usados_frente": usados_frente,
@@ -269,8 +305,7 @@ def site_para_json(site, detalhado=False):
     }
 
     if detalhado:
-        dados["ativos"] = [ativo_para_json(ativo, detalhado=True) for ativo in ativos]
-
+        dados["ativos"] = [ativo_para_json(ativo, detalhado=True) for ativo in ativos_qs]
     return dados
 
 
@@ -290,7 +325,6 @@ def aplicar_dados_site(site, dados):
     for campo in ["nome", "codigo", "localizacao", "responsavel", "status", "observacoes"]:
         if campo in dados:
             setattr(site, campo, (dados.get(campo) or "").strip())
-
     if "setor_id" in dados:
         site.setor = obter_setor(dados.get("setor_id"))
     if "altura_u" in dados:
@@ -309,15 +343,12 @@ def aplicar_dados_ativo(ativo, dados):
         if campo in dados:
             valor = dados.get(campo)
             setattr(ativo, campo, (valor or "").strip() if isinstance(valor, str) or valor is None else valor)
-
     if "posicao_u" in dados:
         ativo.posicao_u = inteiro_positivo(dados.get("posicao_u"), "posição U", 1, 52)
     if "altura_u" in dados:
         ativo.altura_u = inteiro_positivo(dados.get("altura_u"), "altura do ativo", 1, 20)
     if "equipamento_id" in dados:
         ativo.equipamento = obter_equipamento(dados.get("equipamento_id"), ativo_atual=ativo if ativo.pk else None)
-    if "switch_rede_id" in dados:
-        ativo.switch_rede = obter_switch(dados.get("switch_rede_id"), ativo_atual=ativo if ativo.pk else None)
 
 
 def sincronizar_portas_patch(patch_panel, quantidade):
@@ -357,6 +388,146 @@ def aplicar_patch_panel(ativo, dados):
     return patch
 
 
+def status_switch_por_ativo(status):
+    return {
+        RackAtivo.STATUS_ATIVO: SwitchRede.STATUS_EM_USO,
+        RackAtivo.STATUS_RESERVA: SwitchRede.STATUS_RESERVA,
+        RackAtivo.STATUS_MANUTENCAO: SwitchRede.STATUS_MANUTENCAO,
+        RackAtivo.STATUS_INATIVO: SwitchRede.STATUS_INATIVO,
+    }.get(status, SwitchRede.STATUS_EM_USO)
+
+
+def gerar_portas_switch(switch):
+    limite_rj45 = switch.quantidade_portas - switch.quantidade_portas_sfp
+    existentes = {porta.numero: porta for porta in switch.portas.all()}
+    for numero in range(1, switch.quantidade_portas + 1):
+        tipo = SwitchPorta.TIPO_PORTA_SFP if numero > limite_rj45 else SwitchPorta.TIPO_PORTA_RJ45
+        porta = existentes.get(numero)
+        if porta:
+            if porta.tipo_porta != tipo:
+                porta.tipo_porta = tipo
+                porta.save(update_fields=["tipo_porta", "atualizado_em"])
+        else:
+            SwitchPorta.objects.create(switch=switch, numero=numero, tipo_porta=tipo)
+
+
+def validar_reducao_portas_switch(switch, nova_quantidade):
+    portas_removidas = switch.portas.filter(numero__gt=nova_quantidade)
+    ocupadas = portas_removidas.filter(
+        ~Q(status=SwitchPorta.STATUS_LIVRE)
+        | Q(computador__isnull=False)
+        | Q(equipamento__isnull=False)
+        | Q(switch_destino__isnull=False)
+        | ~Q(descricao_dispositivo="")
+        | ~Q(nome="")
+        | ~Q(observacoes="")
+    )
+    if ocupadas.exists():
+        numeros = ", ".join(str(numero) for numero in ocupadas.values_list("numero", flat=True)[:10])
+        raise ValueError(f"Não é possível reduzir o switch: as portas {numeros} possuem informações cadastradas.")
+    portas_removidas.delete()
+
+
+def configurar_switch_do_ativo(ativo, dados):
+    if ativo.tipo != RackAtivo.TIPO_SWITCH:
+        return None
+
+    switch_id = dados.get("switch_rede_id")
+    vinculando_existente = switch_id not in [None, "", "null", "undefined"]
+
+    if vinculando_existente:
+        switch = obter_switch(switch_id, ativo_atual=ativo if ativo.pk else None)
+    elif ativo.switch_rede_id:
+        switch = ativo.switch_rede
+    else:
+        switch = SwitchRede()
+
+    novo_switch = switch.pk is None
+    quantidade_anterior = switch.quantidade_portas if switch.pk else 0
+
+    if novo_switch or not vinculando_existente:
+        switch.nome = (dados.get("nome") or ativo.nome).strip()
+        switch.marca = (dados.get("marca") or ativo.marca or "").strip()
+        switch.modelo = (dados.get("modelo") or ativo.modelo or "").strip()
+        switch.patrimonio = (dados.get("patrimonio") or ativo.patrimonio or "").strip() or None
+        switch.numero_serie = (dados.get("numero_serie") or ativo.numero_serie or "").strip() or None
+        switch.ip_gerenciamento = (dados.get("ip_gerenciamento") or ativo.ip_gerenciamento or "").strip() or None
+        switch.quantidade_portas = inteiro_positivo(
+            dados.get("quantidade_portas", switch.quantidade_portas or 24),
+            "quantidade de portas",
+            2,
+            128,
+        )
+        switch.quantidade_portas_sfp = inteiro_positivo(
+            dados.get("quantidade_portas_sfp", switch.quantidade_portas_sfp or 0),
+            "quantidade de portas SFP",
+            0,
+            32,
+        )
+        if switch.quantidade_portas_sfp > switch.quantidade_portas:
+            raise ValueError("A quantidade de portas SFP não pode superar o total de portas.")
+        if switch.pk and switch.quantidade_portas < quantidade_anterior:
+            validar_reducao_portas_switch(switch, switch.quantidade_portas)
+
+    switch.setor = ativo.site.setor
+    switch.localizacao = ativo.site.localizacao
+    switch.rack = ativo.site.nome
+    switch.status = status_switch_por_ativo(ativo.status)
+    switch.observacoes = (dados.get("observacoes") or ativo.observacoes or switch.observacoes or "").strip()
+
+    if ativo.equipamento and ativo.equipamento.tipo == Equipamento.TIPO_SWITCH:
+        switch.equipamento = ativo.equipamento
+
+    switch.full_clean()
+    switch.save()
+    gerar_portas_switch(switch)
+
+    ativo.switch_rede = switch
+    if not ativo.marca:
+        ativo.marca = switch.marca
+    if not ativo.modelo:
+        ativo.modelo = switch.modelo
+    if not ativo.patrimonio:
+        ativo.patrimonio = switch.patrimonio
+    if not ativo.numero_serie:
+        ativo.numero_serie = switch.numero_serie
+    if not ativo.ip_gerenciamento:
+        ativo.ip_gerenciamento = switch.ip_gerenciamento
+    ativo.save()
+    return switch
+
+
+def relacionamentos_site(site):
+    equipamentos = Equipamento.objects.filter(ativo_rack__isnull=True).select_related("setor")
+    equipamentos_portas = Equipamento.objects.select_related("setor").all()
+    switches = SwitchRede.objects.filter(ativo_rack__isnull=True).select_related("setor")
+    computadores = ComputadorUsuario.objects.select_related("setor").all()
+    switch_portas = SwitchPorta.objects.select_related("switch").filter(
+        switch__ativo_rack__site=site
+    ).order_by("switch__nome", "numero")
+
+    return {
+        "setores": [{"id": item.id, "nome": item.nome} for item in Setor.objects.all()],
+        "equipamentos": [equipamento_resumo(item) for item in equipamentos],
+        "equipamentos_portas": [equipamento_resumo(item) for item in equipamentos_portas],
+        "switches": [switch_resumo(item) for item in switches],
+        "computadores": [{
+            "id": item.id,
+            "nome_usuario": item.nome_usuario,
+            "ip_computador": item.ip_computador,
+            "mac_address": item.mac_address,
+        } for item in computadores],
+        "switch_portas": [{
+            "id": item.id,
+            "numero": item.numero,
+            "switch_id": item.switch_id,
+            "switch_nome": item.switch.nome,
+            "nome": item.nome,
+            "status_display": item.get_status_display(),
+        } for item in switch_portas],
+    }
+
+
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
 def sites(request):
@@ -364,7 +535,6 @@ def sites(request):
         busca = request.GET.get("q", "").strip()
         status = request.GET.get("status", "").strip()
         queryset = SiteRack.objects.select_related("setor").prefetch_related("ativos").all()
-
         if busca:
             queryset = queryset.filter(
                 Q(nome__icontains=busca)
@@ -421,37 +591,11 @@ def site_detalhe(request, pk):
     site = get_object_or_404(SiteRack.objects.select_related("setor"), pk=pk)
 
     if request.method == "GET":
-        equipamentos = Equipamento.objects.filter(ativo_rack__isnull=True).select_related("setor")
-        equipamentos_portas = Equipamento.objects.select_related("setor").all()
-        switches = SwitchRede.objects.filter(ativo_rack__isnull=True).select_related("setor")
-        computadores = ComputadorUsuario.objects.select_related("setor").all()
-        setores = Setor.objects.all()
-        switch_portas = SwitchPorta.objects.select_related("switch").order_by("switch__nome", "numero")
-
         return JsonResponse({
             "ok": True,
             "site": site_para_json(site, detalhado=True),
             "opcoes": opcoes_json(),
-            "relacionamentos": {
-                "setores": [{"id": item.id, "nome": item.nome} for item in setores],
-                "equipamentos": [equipamento_resumo(item) for item in equipamentos],
-                "equipamentos_portas": [equipamento_resumo(item) for item in equipamentos_portas],
-                "switches": [switch_resumo(item) for item in switches],
-                "computadores": [{
-                    "id": item.id,
-                    "nome_usuario": item.nome_usuario,
-                    "ip_computador": item.ip_computador,
-                    "mac_address": item.mac_address,
-                } for item in computadores],
-                "switch_portas": [{
-                    "id": item.id,
-                    "numero": item.numero,
-                    "switch_id": item.switch_id,
-                    "switch_nome": item.switch.nome,
-                    "nome": item.nome,
-                    "status_display": item.get_status_display(),
-                } for item in switch_portas],
-            },
+            "relacionamentos": relacionamentos_site(site),
         })
 
     if request.method == "DELETE":
@@ -495,18 +639,22 @@ def site_ativos(request, site_pk):
             aplicar_dados_ativo(ativo, dados)
             ativo.full_clean()
             ativo.save()
+            configurar_switch_do_ativo(ativo, dados)
             aplicar_patch_panel(ativo, dados)
     except ValueError as erro:
         return resposta_erro(str(erro))
     except ValidationError as erro:
-        return resposta_erro(erro.message_dict)
+        return resposta_erro(erro.message_dict if hasattr(erro, "message_dict") else erro.messages)
     except IntegrityError:
-        return resposta_erro("Já existe um ativo com esse patrimônio, série ou vínculo.", status=409)
+        return resposta_erro(
+            "Já existe um ativo ou switch com o mesmo nome, patrimônio, série, IP ou vínculo.",
+            status=409,
+        )
 
-    ativo.refresh_from_db()
+    ativo = RackAtivo.objects.select_related("site", "equipamento", "switch_rede").get(pk=ativo.pk)
     return JsonResponse({
         "ok": True,
-        "mensagem": "Ativo adicionado ao rack com sucesso.",
+        "mensagem": "Equipamento adicionado ao site com sucesso.",
         "ativo": ativo_para_json(ativo, detalhado=True),
     }, status=201)
 
@@ -525,7 +673,7 @@ def rack_ativo_detalhe(request, pk):
     if request.method == "DELETE":
         nome = ativo.nome
         ativo.delete()
-        return JsonResponse({"ok": True, "mensagem": f"Ativo {nome} removido do rack."})
+        return JsonResponse({"ok": True, "mensagem": f"Equipamento {nome} removido do rack."})
 
     dados = carregar_json(request)
     if dados is None:
@@ -536,18 +684,22 @@ def rack_ativo_detalhe(request, pk):
             aplicar_dados_ativo(ativo, dados)
             ativo.full_clean()
             ativo.save()
+            configurar_switch_do_ativo(ativo, dados)
             aplicar_patch_panel(ativo, dados)
     except ValueError as erro:
         return resposta_erro(str(erro))
     except ValidationError as erro:
-        return resposta_erro(erro.message_dict)
+        return resposta_erro(erro.message_dict if hasattr(erro, "message_dict") else erro.messages)
     except IntegrityError:
-        return resposta_erro("Já existe outro ativo com esse patrimônio, série ou vínculo.", status=409)
+        return resposta_erro(
+            "Já existe outro ativo ou switch com o mesmo nome, patrimônio, série, IP ou vínculo.",
+            status=409,
+        )
 
-    ativo.refresh_from_db()
+    ativo = RackAtivo.objects.select_related("site", "equipamento", "switch_rede").get(pk=ativo.pk)
     return JsonResponse({
         "ok": True,
-        "mensagem": "Ativo do rack atualizado com sucesso.",
+        "mensagem": "Equipamento do rack atualizado com sucesso.",
         "ativo": ativo_para_json(ativo, detalhado=True),
     })
 
@@ -557,8 +709,8 @@ def rack_ativo_detalhe(request, pk):
 def patch_porta_detalhe(request, pk):
     porta = get_object_or_404(
         PatchPanelPorta.objects.select_related(
-            "patch_panel", "patch_panel__ativo", "setor", "computador",
-            "equipamento", "switch_porta", "switch_porta__switch"
+            "patch_panel", "patch_panel__ativo", "patch_panel__ativo__site",
+            "setor", "computador", "equipamento", "switch_porta", "switch_porta__switch"
         ),
         pk=pk,
     )
@@ -579,7 +731,10 @@ def patch_porta_detalhe(request, pk):
             valor = dados.get("equipamento_id")
             porta.equipamento = None if valor in [None, "", "null", "undefined"] else Equipamento.objects.get(pk=int(valor))
         if "switch_porta_id" in dados:
-            porta.switch_porta = obter_switch_porta(dados.get("switch_porta_id"))
+            porta.switch_porta = obter_switch_porta(
+                dados.get("switch_porta_id"),
+                site=porta.patch_panel.ativo.site,
+            )
 
         porta.full_clean()
         porta.save()
