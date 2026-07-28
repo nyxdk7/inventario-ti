@@ -12,6 +12,8 @@ import ManutencoesPage from "./pages/ManutencoesPage";
 import RelatoriosPage from "./pages/RelatoriosPage";
 import SetorDetalhePage from "./pages/SetorDetalhePage";
 import SetoresPage from "./pages/SetoresPage";
+import SwitchDetalhePage from "./pages/SwitchDetalhePage";
+import SwitchesPage from "./pages/SwitchesPage";
 import TrocarSenhaPage from "./pages/TrocarSenhaPage";
 import UsuariosPage from "./pages/UsuariosPage";
 import { apiRequest } from "./services/api";
@@ -46,6 +48,7 @@ export default function App() {
   const [paginaAtual, setPaginaAtual] = useState("dashboard");
   const [equipamentoDetalheId, setEquipamentoDetalheId] = useState(null);
   const [setorDetalheId, setSetorDetalheId] = useState(null);
+  const [switchDetalheId, setSwitchDetalheId] = useState(null);
   const [usuario, setUsuario] = useState(null);
   const [carregandoSessao, setCarregandoSessao] = useState(true);
 
@@ -77,6 +80,7 @@ export default function App() {
       setPaginaAtual("dashboard");
       setEquipamentoDetalheId(null);
       setSetorDetalheId(null);
+      setSwitchDetalheId(null);
     }
 
     function forcarTrocaSenha() {
@@ -94,6 +98,7 @@ export default function App() {
       setPaginaAtual("dashboard");
       setEquipamentoDetalheId(null);
       setSetorDetalheId(null);
+      setSwitchDetalheId(null);
     }
 
     window.addEventListener("sessao-expirada", encerrarSessao);
@@ -110,6 +115,7 @@ export default function App() {
     setPaginaAtual("dashboard");
     setEquipamentoDetalheId(null);
     setSetorDetalheId(null);
+    setSwitchDetalheId(null);
   }
 
   function trocarPagina(pagina) {
@@ -142,6 +148,10 @@ export default function App() {
     if (pagina !== "setor_detalhe") {
       setSetorDetalheId(null);
     }
+
+    if (pagina !== "switch_detalhe") {
+      setSwitchDetalheId(null);
+    }
   }
 
   function abrirDetalhesEquipamento(equipamentoId) {
@@ -164,6 +174,17 @@ export default function App() {
     setPaginaAtual("setor_detalhe");
   }
 
+  function abrirDetalhesSwitch(switchId) {
+    if (usuarioPrecisaTrocarSenha(usuario)) {
+      return;
+    }
+
+    setSwitchDetalheId(switchId);
+    setEquipamentoDetalheId(null);
+    setSetorDetalheId(null);
+    setPaginaAtual("switch_detalhe");
+  }
+
   async function sair() {
     try {
       await apiRequest("/auth/logout/", {
@@ -174,6 +195,7 @@ export default function App() {
       setPaginaAtual("dashboard");
       setEquipamentoDetalheId(null);
       setSetorDetalheId(null);
+      setSwitchDetalheId(null);
     }
   }
 
@@ -186,6 +208,7 @@ export default function App() {
     setPaginaAtual("dashboard");
     setEquipamentoDetalheId(null);
     setSetorDetalheId(null);
+    setSwitchDetalheId(null);
   }
 
   function renderizarPagina() {
@@ -230,6 +253,25 @@ export default function App() {
         <EquipamentoDetalhePage
           equipamentoId={equipamentoDetalheId}
           aoVoltar={() => trocarPagina("equipamentos")}
+          permissoes={permissoes}
+        />
+      );
+    }
+
+    if (paginaAtual === "switches") {
+      return (
+        <SwitchesPage
+          permissoes={permissoes}
+          aoVerDetalhes={abrirDetalhesSwitch}
+        />
+      );
+    }
+
+    if (paginaAtual === "switch_detalhe" && switchDetalheId) {
+      return (
+        <SwitchDetalhePage
+          switchId={switchDetalheId}
+          aoVoltar={() => trocarPagina("switches")}
           permissoes={permissoes}
         />
       );

@@ -445,3 +445,290 @@ class ManutencaoEquipamento(models.Model):
 
     def __str__(self):
         return f"{self.get_tipo_ocorrencia_display()} - {self.equipamento}"
+class SwitchRede(models.Model):
+    STATUS_EM_USO = "em_uso"
+    STATUS_RESERVA = "reserva"
+    STATUS_MANUTENCAO = "manutencao"
+    STATUS_INATIVO = "inativo"
+
+    STATUS = [
+        (STATUS_EM_USO, "Em uso"),
+        (STATUS_RESERVA, "Reserva"),
+        (STATUS_MANUTENCAO, "Em manutenção"),
+        (STATUS_INATIVO, "Desativado"),
+    ]
+
+    nome = models.CharField(max_length=120, unique=True, verbose_name="Nome do switch")
+    equipamento = models.OneToOneField(
+        Equipamento,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="switch_rede",
+        verbose_name="Equipamento relacionado",
+    )
+    marca = models.CharField(max_length=100, blank=True, verbose_name="Marca")
+    modelo = models.CharField(max_length=120, blank=True, verbose_name="Modelo")
+    patrimonio = models.CharField(max_length=80, unique=True, null=True, blank=True, verbose_name="Patrimônio")
+    numero_serie = models.CharField(max_length=120, unique=True, null=True, blank=True, verbose_name="Número de série")
+    setor = models.ForeignKey(
+        Setor,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="switches",
+        verbose_name="Setor",
+    )
+    localizacao = models.CharField(max_length=150, blank=True, verbose_name="Localização")
+    rack = models.CharField(max_length=100, blank=True, verbose_name="Rack / armário")
+    ip_gerenciamento = models.GenericIPAddressField(
+        protocol="IPv4",
+        unique=True,
+        null=True,
+        blank=True,
+        verbose_name="IP de gerenciamento",
+    )
+    quantidade_portas = models.PositiveSmallIntegerField(default=24, verbose_name="Quantidade total de portas")
+    quantidade_portas_sfp = models.PositiveSmallIntegerField(default=0, verbose_name="Quantidade de portas SFP")
+    status = models.CharField(max_length=30, choices=STATUS, default=STATUS_EM_USO, verbose_name="Status")
+    observacoes = models.TextField(blank=True, verbose_name="Observações")
+    criado_em = models.DateTimeField(auto_now_add=True, verbose_name="Criado em")
+    atualizado_em = models.DateTimeField(auto_now=True, verbose_name="Atualizado em")
+
+    class Meta:
+        verbose_name = "Switch de rede"
+        verbose_name_plural = "Switches de rede"
+        ordering = ["nome"]
+
+    def clean(self):
+        self.nome = (self.nome or "").strip()
+        self.marca = (self.marca or "").strip()
+        self.modelo = (self.modelo or "").strip()
+        self.patrimonio = (self.patrimonio or "").strip() or None
+        self.numero_serie = (self.numero_serie or "").strip() or None
+        self.localizacao = (self.localizacao or "").strip()
+        self.rack = (self.rack or "").strip()
+        self.status = (self.status or "").strip()
+        self.observacoes = (self.observacoes or "").strip()
+
+        if not self.nome:
+            raise ValidationError({"nome": "Informe o nome do switch."})
+
+        if self.quantidade_portas < 2 or self.quantidade_portas > 128:
+            raise ValidationError({"quantidade_portas": "Informe uma quantidade entre 2 e 128 portas."})
+
+        if self.quantidade_portas_sfp < 0 or self.quantidade_portas_sfp > self.quantidade_portas:
+            raise ValidationError({"quantidade_portas_sfp": "A quantidade de portas SFP não pode superar o total de portas."})
+
+        if self.equipamento and self.equipamento.tipo != Equipamento.TIPO_SWITCH:
+            raise ValidationError({"equipamento": "O equipamento relacionado deve ser do tipo Switch."})
+
+    def save(self, *args, **kwargs):
+        self.nome = (self.nome or "").strip()
+        self.marca = (self.marca or "").strip()
+        self.modelo = (self.modelo or "").strip()
+        self.patrimonio = (self.patrimonio or "").strip() or None
+        self.numero_serie = (self.numero_serie or "").strip() or None
+        self.localizacao = (self.localizacao or "").strip()
+        self.rack = (self.rack or "").strip()
+        self.status = (self.status or "").strip()
+        self.observacoes = (self.observacoes or "").strip()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.nome
+
+
+class SwitchPorta(models.Model):
+    TIPO_PORTA_RJ45 = "rj45"
+    TIPO_PORTA_SFP = "sfp"
+
+    TIPOS_PORTA = [
+        (TIPO_PORTA_RJ45, "RJ45"),
+        (TIPO_PORTA_SFP, "SFP/SFP+"),
+    ]
+
+    STATUS_LIVRE = "livre"
+    STATUS_ATIVA = "ativa"
+    STATUS_DESCONECTADA = "desconectada"
+    STATUS_UPLINK = "uplink"
+    STATUS_BLOQUEADA = "bloqueada"
+    STATUS_DEFEITUOSA = "defeituosa"
+
+    STATUS = [
+        (STATUS_LIVRE, "Livre"),
+        (STATUS_ATIVA, "Ativa"),
+        (STATUS_DESCONECTADA, "Desconectada"),
+        (STATUS_UPLINK, "Uplink"),
+        (STATUS_BLOQUEADA, "Bloqueada"),
+        (STATUS_DEFEITUOSA, "Defeituosa"),
+    ]
+
+    DISPOSITIVO_COMPUTADOR = "computador"
+    DISPOSITIVO_IMPRESSORA = "impressora"
+    DISPOSITIVO_ACCESS_POINT = "access_point"
+    DISPOSITIVO_CAMERA = "camera"
+    DISPOSITIVO_TELEFONE_IP = "telefone_ip"
+    DISPOSITIVO_SWITCH = "switch"
+    DISPOSITIVO_ROTEADOR = "roteador"
+    DISPOSITIVO_SERVIDOR = "servidor"
+    DISPOSITIVO_NVR_DVR = "nvr_dvr"
+    DISPOSITIVO_OUTRO = "outro"
+
+    TIPOS_DISPOSITIVO = [
+        (DISPOSITIVO_COMPUTADOR, "Computador"),
+        (DISPOSITIVO_IMPRESSORA, "Impressora"),
+        (DISPOSITIVO_ACCESS_POINT, "Access Point"),
+        (DISPOSITIVO_CAMERA, "Câmera"),
+        (DISPOSITIVO_TELEFONE_IP, "Telefone IP"),
+        (DISPOSITIVO_SWITCH, "Outro switch"),
+        (DISPOSITIVO_ROTEADOR, "Roteador"),
+        (DISPOSITIVO_SERVIDOR, "Servidor"),
+        (DISPOSITIVO_NVR_DVR, "NVR/DVR"),
+        (DISPOSITIVO_OUTRO, "Outro"),
+    ]
+
+    VELOCIDADE_AUTO = "auto"
+    VELOCIDADE_FE = "100m"
+    VELOCIDADE_1G = "1g"
+    VELOCIDADE_25G = "2_5g"
+    VELOCIDADE_10G = "10g"
+
+    VELOCIDADES = [
+        (VELOCIDADE_AUTO, "Automático"),
+        (VELOCIDADE_FE, "100 Mb/s"),
+        (VELOCIDADE_1G, "1 Gb/s"),
+        (VELOCIDADE_25G, "2,5 Gb/s"),
+        (VELOCIDADE_10G, "10 Gb/s"),
+    ]
+
+    switch = models.ForeignKey(
+        SwitchRede,
+        on_delete=models.CASCADE,
+        related_name="portas",
+        verbose_name="Switch",
+    )
+    numero = models.PositiveSmallIntegerField(verbose_name="Número da porta")
+    tipo_porta = models.CharField(max_length=20, choices=TIPOS_PORTA, default=TIPO_PORTA_RJ45, verbose_name="Tipo da porta")
+    nome = models.CharField(max_length=120, blank=True, verbose_name="Nome da porta")
+    tipo_dispositivo = models.CharField(max_length=30, choices=TIPOS_DISPOSITIVO, blank=True, verbose_name="Tipo de dispositivo")
+    status = models.CharField(max_length=30, choices=STATUS, default=STATUS_LIVRE, verbose_name="Status")
+
+    computador = models.ForeignKey(
+        ComputadorUsuario,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="portas_switch",
+        verbose_name="Computador conectado",
+    )
+    equipamento = models.ForeignKey(
+        Equipamento,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="portas_switch",
+        verbose_name="Equipamento conectado",
+    )
+    switch_destino = models.ForeignKey(
+        SwitchRede,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="uplinks_entrada",
+        verbose_name="Switch conectado",
+    )
+    descricao_dispositivo = models.CharField(max_length=180, blank=True, verbose_name="Descrição manual do dispositivo")
+    usuario_responsavel = models.CharField(max_length=150, blank=True, verbose_name="Usuário responsável")
+    setor = models.ForeignKey(
+        Setor,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="portas_switch",
+        verbose_name="Setor atendido",
+    )
+    ip_conectado = models.GenericIPAddressField(protocol="IPv4", null=True, blank=True, verbose_name="IP conectado")
+    mac_conectado = models.CharField(max_length=17, blank=True, verbose_name="MAC conectado")
+    vlan = models.CharField(max_length=80, blank=True, verbose_name="VLAN")
+    perfil = models.CharField(max_length=100, blank=True, verbose_name="Perfil da porta")
+    velocidade = models.CharField(max_length=20, choices=VELOCIDADES, default=VELOCIDADE_AUTO, verbose_name="Velocidade")
+    poe = models.BooleanField(default=False, verbose_name="PoE")
+    observacoes = models.TextField(blank=True, verbose_name="Observações")
+    criado_em = models.DateTimeField(auto_now_add=True, verbose_name="Criado em")
+    atualizado_em = models.DateTimeField(auto_now=True, verbose_name="Atualizado em")
+
+    class Meta:
+        verbose_name = "Porta de switch"
+        verbose_name_plural = "Portas de switch"
+        ordering = ["switch", "numero"]
+        constraints = [
+            models.UniqueConstraint(fields=["switch", "numero"], name="switch_porta_numero_unico"),
+        ]
+
+    def clean(self):
+        self.nome = (self.nome or "").strip()
+        self.tipo_dispositivo = (self.tipo_dispositivo or "").strip()
+        self.descricao_dispositivo = (self.descricao_dispositivo or "").strip()
+        self.usuario_responsavel = (self.usuario_responsavel or "").strip()
+        self.mac_conectado = (self.mac_conectado or "").strip()
+        self.vlan = (self.vlan or "").strip()
+        self.perfil = (self.perfil or "").strip()
+        self.observacoes = (self.observacoes or "").strip()
+
+        if self.numero < 1 or self.numero > self.switch.quantidade_portas:
+            raise ValidationError({"numero": "O número da porta está fora da quantidade configurada no switch."})
+
+        relacionamentos = [self.computador_id, self.equipamento_id, self.switch_destino_id]
+        if sum(1 for valor in relacionamentos if valor) > 1:
+            raise ValidationError("Vincule apenas um item do inventário por porta.")
+
+        if self.switch_destino_id and self.switch_destino_id == self.switch_id:
+            raise ValidationError({"switch_destino": "Um switch não pode ser ligado a ele mesmo."})
+
+        if self.mac_conectado:
+            try:
+                self.mac_conectado = normalizar_mac(self.mac_conectado)
+            except ValueError as erro:
+                raise ValidationError({"mac_conectado": str(erro)})
+
+    def save(self, *args, **kwargs):
+        self.nome = (self.nome or "").strip()
+        self.tipo_dispositivo = (self.tipo_dispositivo or "").strip()
+        self.descricao_dispositivo = (self.descricao_dispositivo or "").strip()
+        self.usuario_responsavel = (self.usuario_responsavel or "").strip()
+        self.mac_conectado = (self.mac_conectado or "").strip()
+        self.vlan = (self.vlan or "").strip()
+        self.perfil = (self.perfil or "").strip()
+        self.observacoes = (self.observacoes or "").strip()
+
+        if self.mac_conectado:
+            self.mac_conectado = normalizar_mac(self.mac_conectado)
+
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.switch.nome} - Porta {self.numero}"
+
+
+class SwitchPortaHistorico(models.Model):
+    porta = models.ForeignKey(
+        SwitchPorta,
+        on_delete=models.CASCADE,
+        related_name="historico",
+        verbose_name="Porta",
+    )
+    acao = models.CharField(max_length=80, default="Atualização", verbose_name="Ação")
+    resumo = models.CharField(max_length=220, blank=True, verbose_name="Resumo")
+    dados_anteriores = models.JSONField(default=dict, blank=True, verbose_name="Dados anteriores")
+    dados_novos = models.JSONField(default=dict, blank=True, verbose_name="Dados novos")
+    alterado_por = models.CharField(max_length=150, blank=True, verbose_name="Alterado por")
+    criado_em = models.DateTimeField(auto_now_add=True, verbose_name="Criado em")
+
+    class Meta:
+        verbose_name = "Histórico de porta"
+        verbose_name_plural = "Históricos de portas"
+        ordering = ["-criado_em"]
+
+    def __str__(self):
+        return f"{self.porta} - {self.criado_em:%d/%m/%Y %H:%M}"

@@ -14,6 +14,7 @@ import {
   FiMonitor,
   FiPackage,
   FiSettings,
+  FiServer,
   FiTool,
   FiUsers,
   FiX,
@@ -49,6 +50,8 @@ function tituloPagina(paginaAtual) {
   if (paginaAtual === "setor_detalhe") return "Detalhes do setor";
   if (paginaAtual === "equipamentos") return "Equipamentos";
   if (paginaAtual === "equipamento_detalhe") return "Detalhes do equipamento";
+  if (paginaAtual === "switches") return "Switches de rede";
+  if (paginaAtual === "switch_detalhe") return "Mapa de portas do switch";
   if (paginaAtual === "manutencoes") return "Histórico e manutenções";
   if (paginaAtual === "relatorios") return "Relatórios";
   if (paginaAtual === "usuarios") return "Usuários e permissões";
@@ -63,6 +66,8 @@ function subtituloPagina(paginaAtual) {
   if (paginaAtual === "setor_detalhe") return "Computadores, usuários e equipamentos vinculados ao setor";
   if (paginaAtual === "equipamentos") return "Cadastro de patrimônio, marca, modelo, série, setor e status";
   if (paginaAtual === "equipamento_detalhe") return "Visão completa do patrimônio, fotos, compra e histórico";
+  if (paginaAtual === "switches") return "Cadastro e mapa físico dos switches da infraestrutura";
+  if (paginaAtual === "switch_detalhe") return "Controle de ocupação, dispositivos, IP, MAC, VLAN e responsáveis por porta";
   if (paginaAtual === "manutencoes") return "Registros de manutenção, movimentação, limpeza, baixa e observações";
   if (paginaAtual === "relatorios") return "Exportação de dados em Excel e PDF";
   if (paginaAtual === "usuarios") return "Gerenciamento de acesso por perfil de usuário";
@@ -77,6 +82,8 @@ function nomeModulo(paginaAtual) {
   if (paginaAtual === "setor_detalhe") return "Detalhes";
   if (paginaAtual === "equipamentos") return "Equipamentos";
   if (paginaAtual === "equipamento_detalhe") return "Detalhes";
+  if (paginaAtual === "switches") return "Switches";
+  if (paginaAtual === "switch_detalhe") return "Portas";
   if (paginaAtual === "manutencoes") return "Histórico";
   if (paginaAtual === "relatorios") return "Relatórios";
   if (paginaAtual === "usuarios") return "Usuários";
@@ -102,6 +109,7 @@ export default function Layout({
   );
 
   const equipamentosAtivo = paginaAtual === "equipamentos" || paginaAtual === "equipamento_detalhe";
+  const switchesAtivo = paginaAtual === "switches" || paginaAtual === "switch_detalhe";
   const setoresAtivo = paginaAtual === "setores" || paginaAtual === "setor_detalhe";
   const administradorAtivo = paginaAtual === "usuarios" || paginaAtual === "backups" || paginaAtual === "configuracoes";
 
@@ -189,6 +197,11 @@ export default function Layout({
           <button type="button" onClick={() => navegar("equipamentos")} className={`${itemClasse(equipamentosAtivo)} mt-2`}>
             <span className={iconeClasse(equipamentosAtivo)}><FiHardDrive size={18} /></span>
             {menuExpandido && <span>Equipamentos</span>}
+          </button>
+
+          <button type="button" onClick={() => navegar("switches")} className={`${itemClasse(switchesAtivo)} mt-2`}>
+            <span className={iconeClasse(switchesAtivo)}><FiServer size={18} /></span>
+            {menuExpandido && <span>Switches</span>}
           </button>
 
           <button type="button" onClick={() => navegar("manutencoes")} className={`${itemClasse(paginaAtual === "manutencoes")} mt-2`}>
