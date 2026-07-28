@@ -24,7 +24,7 @@ function formatarMoeda(valor) {
 
 function formatarData(valor) {
   if (!valor) return "-";
-  const [ano, mes, dia] = valor.split("-");
+  const [ano, mes, dia] = String(valor).split("-");
   return ano && mes && dia ? `${dia}/${mes}/${ano}` : valor;
 }
 
@@ -36,6 +36,18 @@ function badgeStatus(status) {
     manutencao: "border-orange-200 bg-orange-50 text-orange-700",
     reserva: "border-slate-200 bg-slate-100 text-slate-700",
   };
+  return classes[status] || classes.reserva;
+}
+
+function iconeStatusClasse(status) {
+  const classes = {
+    ativa: "text-emerald-500",
+    cancelada: "text-red-500",
+    espera: "text-amber-500",
+    manutencao: "text-orange-500",
+    reserva: "text-slate-400",
+  };
+
   return classes[status] || classes.reserva;
 }
 
@@ -133,7 +145,11 @@ export default function StarlinkDetalhePage({ starlinkId, aoVoltar }) {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-3">
-              <FiWifi size={26} className="text-slate-400" />
+              <FiWifi
+                size={26}
+                className={`shrink-0 ${iconeStatusClasse(starlink.status)}`}
+                title={`Status: ${starlink.status_display}`}
+              />
               <h2 className="text-2xl font-black text-slate-950">{starlink.nome}</h2>
               <span className={`border px-2.5 py-1 text-xs font-bold ${badgeStatus(starlink.status)}`}>{starlink.status_display}</span>
             </div>
@@ -187,11 +203,9 @@ export default function StarlinkDetalhePage({ starlinkId, aoVoltar }) {
               <Info titulo="E-mail da conta" valor={starlink.email_conta} icone={FiUser} />
               <Info titulo="Telefone" valor={starlink.telefone} icone={FiUser} />
               <Info titulo="Plano" valor={starlink.plano} icone={FiCreditCard} />
-              <Info titulo="Mensalidade" valor={formatarMoeda(starlink.valor_mensalidade)} icone={FiCreditCard} />
-              <Info titulo="Instalação" valor={formatarData(starlink.data_instalacao)} icone={FiCalendar} />
-              <Info titulo="Ativação" valor={formatarData(starlink.data_ativacao)} icone={FiCalendar} />
-              <Info titulo="Cancelamento" valor={formatarData(starlink.data_cancelamento)} icone={FiCalendar} />
               <Info titulo="Situação" valor={starlink.status_display} icone={FiInfo} />
+              <Info titulo="Data da cobrança" valor={formatarData(starlink.data_cobranca)} icone={FiCalendar} />
+              <Info titulo="Valor da mensalidade" valor={formatarMoeda(starlink.valor_mensalidade)} icone={FiCreditCard} />
             </div>
             <div className="border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
               A senha da conta não é armazenada nem exibida neste módulo.

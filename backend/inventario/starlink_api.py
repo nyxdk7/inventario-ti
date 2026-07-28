@@ -6,6 +6,7 @@ from django.db import IntegrityError
 from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from django.utils.dateparse import parse_date
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -141,9 +142,7 @@ def starlink_para_json(starlink, detalhado=False):
         "setor_id": starlink.setor_id,
         "equipamento": equipamento,
         "equipamento_id": starlink.equipamento_id,
-        "data_instalacao": starlink.data_instalacao.strftime("%Y-%m-%d") if starlink.data_instalacao else "",
-        "data_ativacao": starlink.data_ativacao.strftime("%Y-%m-%d") if starlink.data_ativacao else "",
-        "data_cancelamento": starlink.data_cancelamento.strftime("%Y-%m-%d") if starlink.data_cancelamento else "",
+        "data_cobranca": starlink.data_ativacao.strftime("%Y-%m-%d") if starlink.data_ativacao else "",
         "valor_mensalidade": str(starlink.valor_mensalidade) if starlink.valor_mensalidade is not None else "",
         "centro_custo": starlink.centro_custo,
         "observacoes": starlink.observacoes,
@@ -195,15 +194,20 @@ def aplicar_dados(starlink, dados):
     if "equipamento_id" in dados:
         starlink.equipamento = obter_equipamento(dados.get("equipamento_id"), starlink_atual=starlink if starlink.pk else None)
 
-    for campo in ["data_instalacao", "data_ativacao", "data_cancelamento"]:
-        if campo in dados:
-            setattr(starlink, campo, data_ou_none(dados.get(campo)))
+    if "data_cobranca" in dados:
+        starlink.data_ativacao = data_ou_none(dados.get("data_cobranca"))
 
     if "valor_mensalidade" in dados:
         starlink.valor_mensalidade = decimal_ou_none(dados.get("valor_mensalidade"))
 
     if "integracao_habilitada" in dados:
         starlink.integracao_habilitada = bool(dados.get("integracao_habilitada"))
+
+    if starlink.status == Starlink.STATUS_CANCELADA:
+        if not starlink.data_cancelamento:
+            starlink.data_cancelamento = timezone.localdate()
+    else:
+        starlink.data_cancelamento = None
 
     if starlink.integracao_habilitada and starlink.status_sincronizacao == Starlink.SINCRONIZACAO_NAO_CONFIGURADA:
         starlink.status_sincronizacao = Starlink.SINCRONIZACAO_PENDENTE

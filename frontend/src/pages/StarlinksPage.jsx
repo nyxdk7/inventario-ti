@@ -27,9 +27,7 @@ const formularioInicial = {
   responsavel: "",
   setor_id: "",
   equipamento_id: "",
-  data_instalacao: "",
-  data_ativacao: "",
-  data_cancelamento: "",
+  data_cobranca: "",
   valor_mensalidade: "",
   centro_custo: "",
   observacoes: "",
@@ -43,11 +41,84 @@ const formularioInicial = {
 
 const inputClasse = "w-full border border-slate-300 bg-white px-3 py-3 text-sm outline-none focus:border-slate-950 sm:py-2.5";
 
-function formatarMoeda(valor) {
-  if (valor === "" || valor === null || valor === undefined) return "-";
+function somenteDigitos(valor) {
+  return String(valor || "").replace(/\D/g, "");
+}
+
+function formatarDataDigitada(valor) {
+  const digitos = somenteDigitos(valor).slice(0, 8);
+
+  if (digitos.length <= 2) return digitos;
+  if (digitos.length <= 4) return `${digitos.slice(0, 2)}/${digitos.slice(2)}`;
+
+  return `${digitos.slice(0, 2)}/${digitos.slice(2, 4)}/${digitos.slice(4)}`;
+}
+
+function dataIsoParaBr(valor) {
+  if (!valor) return "";
+  if (String(valor).includes("/")) return formatarDataDigitada(valor);
+
+  const [ano, mes, dia] = String(valor).split("-");
+  return ano && mes && dia ? `${dia}/${mes}/${ano}` : "";
+}
+
+function dataBrParaIso(valor) {
+  const digitos = somenteDigitos(valor);
+
+  if (!digitos) return "";
+
+  if (digitos.length !== 8) {
+    throw new Error("Informe a data da cobrança completa no formato DD/MM/AAAA.");
+  }
+
+  const dia = Number(digitos.slice(0, 2));
+  const mes = Number(digitos.slice(2, 4));
+  const ano = Number(digitos.slice(4, 8));
+  const data = new Date(ano, mes - 1, dia);
+
+  if (
+    ano < 1900 ||
+    ano > 2200 ||
+    data.getFullYear() !== ano ||
+    data.getMonth() !== mes - 1 ||
+    data.getDate() !== dia
+  ) {
+    throw new Error("A data da cobrança informada não é válida.");
+  }
+
+  return `${String(ano).padStart(4, "0")}-${String(mes).padStart(2, "0")}-${String(dia).padStart(2, "0")}`;
+}
+
+function formatarMoedaDigitada(valor) {
+  const digitos = somenteDigitos(valor).slice(0, 14);
+
+  if (!digitos) return "";
+
+  return (Number(digitos) / 100).toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+}
+
+function valorDecimalParaMoeda(valor) {
+  if (valor === "" || valor === null || valor === undefined) return "";
+
   const numero = Number(String(valor).replace(",", "."));
-  if (Number.isNaN(numero)) return valor;
-  return numero.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+  if (Number.isNaN(numero)) return "";
+
+  return numero.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+}
+
+function moedaParaDecimal(valor) {
+  const digitos = somenteDigitos(valor);
+
+  if (!digitos) return "";
+
+  return (Number(digitos) / 100).toFixed(2);
 }
 
 function badgeStatus(status) {
@@ -58,12 +129,26 @@ function badgeStatus(status) {
     manutencao: "border-orange-200 bg-orange-50 text-orange-700",
     reserva: "border-slate-200 bg-slate-100 text-slate-700",
   };
+
+  return classes[status] || classes.reserva;
+}
+
+function iconeStatusClasse(status) {
+  const classes = {
+    ativa: "text-emerald-500",
+    cancelada: "text-red-500",
+    espera: "text-amber-500",
+    manutencao: "text-orange-500",
+    reserva: "text-slate-400",
+  };
+
   return classes[status] || classes.reserva;
 }
 
 function Aviso({ aviso, aoFechar }) {
   if (!aviso) return null;
   const erro = aviso.tipo === "erro";
+
   return (
     <div className={`mb-4 flex items-start justify-between gap-4 border p-4 text-sm ${erro ? "border-red-200 bg-red-50 text-red-700" : "border-emerald-200 bg-emerald-50 text-emerald-700"}`}>
       <span>{aviso.texto}</span>
@@ -116,7 +201,11 @@ function StarlinkCard({ item, aoVer, aoEditar, aoExcluir, podeEditar, podeExclui
       <div className="grid gap-4 lg:grid-cols-[1fr_auto]">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <FiWifi size={20} className="text-slate-400" />
+            <FiWifi
+              size={20}
+              className={`shrink-0 ${iconeStatusClasse(item.status)}`}
+              title={`Status: ${item.status_display}`}
+            />
             <h3 className="truncate text-lg font-black text-slate-950">{item.nome}</h3>
             <span className={`inline-flex border px-2 py-1 text-xs font-bold ${badgeStatus(item.status)}`}>
               {item.status_display}
@@ -241,7 +330,27 @@ export default function StarlinksPage({ permissoes, aoVerDetalhes }) {
 
   function alterarCampo(evento) {
     const { name, value, type, checked } = evento.target;
-    setFormulario((atual) => ({ ...atual, [name]: type === "checkbox" ? checked : value }));
+
+    if (name === "data_cobranca") {
+      setFormulario((atual) => ({
+        ...atual,
+        data_cobranca: formatarDataDigitada(value),
+      }));
+      return;
+    }
+
+    if (name === "valor_mensalidade") {
+      setFormulario((atual) => ({
+        ...atual,
+        valor_mensalidade: formatarMoedaDigitada(value),
+      }));
+      return;
+    }
+
+    setFormulario((atual) => ({
+      ...atual,
+      [name]: type === "checkbox" ? checked : value,
+    }));
   }
 
   function abrirNovo() {
@@ -261,6 +370,8 @@ export default function StarlinksPage({ permissoes, aoVerDetalhes }) {
         ...registro,
         setor_id: registro.setor_id || "",
         equipamento_id: registro.equipamento_id || "",
+        data_cobranca: dataIsoParaBr(registro.data_cobranca),
+        valor_mensalidade: valorDecimalParaMoeda(registro.valor_mensalidade),
       });
       setEditandoId(item.id);
       setModalAberto(true);
@@ -280,12 +391,18 @@ export default function StarlinksPage({ permissoes, aoVerDetalhes }) {
     evento.preventDefault();
     setSalvando(true);
     setAviso(null);
+
     try {
       const endpoint = editandoId ? `/starlinks/${editandoId}/` : "/starlinks/";
       const metodo = editandoId ? "PUT" : "POST";
+      const payload = {
+        ...formulario,
+        data_cobranca: dataBrParaIso(formulario.data_cobranca),
+        valor_mensalidade: moedaParaDecimal(formulario.valor_mensalidade),
+      };
       const dados = await apiRequest(endpoint, {
         method: metodo,
-        body: JSON.stringify(formulario),
+        body: JSON.stringify(payload),
       });
       setAviso({ tipo: "sucesso", texto: dados.mensagem });
       setModalAberto(false);
@@ -414,11 +531,32 @@ export default function StarlinksPage({ permissoes, aoVerDetalhes }) {
                 <Campo label="Centro de custo"><input name="centro_custo" value={formulario.centro_custo} onChange={alterarCampo} className={inputClasse} /></Campo>
               </Secao>
 
-              <Secao titulo="Datas e cobrança" descricao="Controle administrativo da instalação.">
-                <Campo label="Data de instalação"><input type="date" name="data_instalacao" value={formulario.data_instalacao} onChange={alterarCampo} className={inputClasse} /></Campo>
-                <Campo label="Data de ativação"><input type="date" name="data_ativacao" value={formulario.data_ativacao} onChange={alterarCampo} className={inputClasse} /></Campo>
-                <Campo label="Data de cancelamento"><input type="date" name="data_cancelamento" value={formulario.data_cancelamento} onChange={alterarCampo} className={inputClasse} /></Campo>
-                <Campo label="Mensalidade"><input name="valor_mensalidade" value={formulario.valor_mensalidade} onChange={alterarCampo} className={inputClasse} placeholder="Ex.: 350,00" /></Campo>
+              <Secao titulo="Cobrança" descricao="A data e o valor se ajustam automaticamente enquanto você digita.">
+                <Campo label="Data da cobrança">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    maxLength={10}
+                    name="data_cobranca"
+                    value={formulario.data_cobranca}
+                    onChange={alterarCampo}
+                    className={inputClasse}
+                    placeholder="DD/MM/AAAA"
+                  />
+                </Campo>
+                <Campo label="Valor da mensalidade">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    name="valor_mensalidade"
+                    value={formulario.valor_mensalidade}
+                    onChange={alterarCampo}
+                    className={inputClasse}
+                    placeholder="R$ 0,00"
+                  />
+                </Campo>
                 <div className="sm:col-span-2"><Campo label="Observações"><textarea name="observacoes" value={formulario.observacoes} onChange={alterarCampo} className={`${inputClasse} min-h-24`} /></Campo></div>
               </Secao>
 
