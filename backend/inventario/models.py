@@ -977,3 +977,430 @@ class StarlinkTelemetria(models.Model):
 
     def __str__(self):
         return f"Telemetria - {self.starlink.nome}"
+
+
+# === MODULO SITES / RACKS ===
+class SiteRack(models.Model):
+    STATUS_ATIVO = "ativo"
+    STATUS_PLANEJAMENTO = "planejamento"
+    STATUS_MANUTENCAO = "manutencao"
+    STATUS_INATIVO = "inativo"
+
+    STATUS = [
+        (STATUS_ATIVO, "Ativo"),
+        (STATUS_PLANEJAMENTO, "Em planejamento"),
+        (STATUS_MANUTENCAO, "Em manutenção"),
+        (STATUS_INATIVO, "Inativo"),
+    ]
+
+    nome = models.CharField(max_length=150, unique=True, verbose_name="Nome do site / rack")
+    codigo = models.CharField(max_length=80, unique=True, null=True, blank=True, verbose_name="Código")
+    setor = models.ForeignKey(
+        Setor,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="sites_racks",
+        verbose_name="Setor",
+    )
+    localizacao = models.CharField(max_length=180, blank=True, verbose_name="Localização")
+    responsavel = models.CharField(max_length=150, blank=True, verbose_name="Responsável")
+    altura_u = models.PositiveSmallIntegerField(default=42, verbose_name="Altura do rack em U")
+    largura_polegadas = models.PositiveSmallIntegerField(default=19, verbose_name="Largura em polegadas")
+    status = models.CharField(max_length=30, choices=STATUS, default=STATUS_ATIVO, verbose_name="Status")
+    observacoes = models.TextField(blank=True, verbose_name="Observações")
+    criado_em = models.DateTimeField(auto_now_add=True, verbose_name="Criado em")
+    atualizado_em = models.DateTimeField(auto_now=True, verbose_name="Atualizado em")
+
+    class Meta:
+        verbose_name = "Site / Rack"
+        verbose_name_plural = "Sites / Racks"
+        ordering = ["nome"]
+
+    def clean(self):
+        self.nome = (self.nome or "").strip()
+        self.codigo = (self.codigo or "").strip() or None
+        self.localizacao = (self.localizacao or "").strip()
+        self.responsavel = (self.responsavel or "").strip()
+        self.status = (self.status or "").strip()
+        self.observacoes = (self.observacoes or "").strip()
+
+        if not self.nome:
+            raise ValidationError({"nome": "Informe o nome do site / rack."})
+
+        if self.altura_u < 4 or self.altura_u > 52:
+            raise ValidationError({"altura_u": "Informe uma altura entre 4U e 52U."})
+
+        if self.largura_polegadas not in [10, 19, 23]:
+            raise ValidationError({"largura_polegadas": "Use uma largura padrão de 10, 19 ou 23 polegadas."})
+
+        if self.pk:
+            maior_posicao_final = max(
+                (ativo.posicao_u_final for ativo in self.ativos.all()),
+                default=0,
+            )
+            if maior_posicao_final > self.altura_u:
+                raise ValidationError({
+                    "altura_u": "Existem ativos posicionados acima da nova altura informada."
+                })
+
+    def save(self, *args, **kwargs):
+        self.nome = (self.nome or "").strip()
+        self.codigo = (self.codigo or "").strip() or None
+        self.localizacao = (self.localizacao or "").strip()
+        self.responsavel = (self.responsavel or "").strip()
+        self.status = (self.status or "").strip()
+        self.observacoes = (self.observacoes or "").strip()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.nome
+
+
+class RackAtivo(models.Model):
+    TIPO_SWITCH = "switch"
+    TIPO_PATCH_PANEL = "patch_panel"
+    TIPO_ROTEADOR = "roteador"
+    TIPO_FIREWALL = "firewall"
+    TIPO_SERVIDOR = "servidor"
+    TIPO_NOBREAK = "nobreak"
+    TIPO_MODEM = "modem"
+    TIPO_DVR_NVR = "dvr_nvr"
+    TIPO_ORGANIZADOR = "organizador"
+    TIPO_BANDEJA = "bandeja"
+    TIPO_CONVERSOR = "conversor"
+    TIPO_OUTRO = "outro"
+
+    TIPOS = [
+        (TIPO_SWITCH, "Switch"),
+        (TIPO_PATCH_PANEL, "Patch panel"),
+        (TIPO_ROTEADOR, "Roteador"),
+        (TIPO_FIREWALL, "Firewall"),
+        (TIPO_SERVIDOR, "Servidor"),
+        (TIPO_NOBREAK, "Nobreak"),
+        (TIPO_MODEM, "Modem / ONU"),
+        (TIPO_DVR_NVR, "DVR / NVR"),
+        (TIPO_ORGANIZADOR, "Organizador de cabos"),
+        (TIPO_BANDEJA, "Bandeja"),
+        (TIPO_CONVERSOR, "Conversor / mídia"),
+        (TIPO_OUTRO, "Outro"),
+    ]
+
+    STATUS_ATIVO = "ativo"
+    STATUS_RESERVA = "reserva"
+    STATUS_MANUTENCAO = "manutencao"
+    STATUS_INATIVO = "inativo"
+
+    STATUS = [
+        (STATUS_ATIVO, "Ativo"),
+        (STATUS_RESERVA, "Reserva"),
+        (STATUS_MANUTENCAO, "Em manutenção"),
+        (STATUS_INATIVO, "Inativo"),
+    ]
+
+    LADO_FRENTE = "frente"
+    LADO_TRASEIRA = "traseira"
+
+    LADOS = [
+        (LADO_FRENTE, "Frente"),
+        (LADO_TRASEIRA, "Traseira"),
+    ]
+
+    site = models.ForeignKey(
+        SiteRack,
+        on_delete=models.CASCADE,
+        related_name="ativos",
+        verbose_name="Site / Rack",
+    )
+    nome = models.CharField(max_length=150, verbose_name="Nome do ativo")
+    tipo = models.CharField(max_length=30, choices=TIPOS, verbose_name="Tipo")
+    tipo_outro_descricao = models.CharField(max_length=120, blank=True, verbose_name="Descrição do tipo")
+    lado = models.CharField(max_length=20, choices=LADOS, default=LADO_FRENTE, verbose_name="Lado do rack")
+    posicao_u = models.PositiveSmallIntegerField(default=1, verbose_name="Posição inicial em U")
+    altura_u = models.PositiveSmallIntegerField(default=1, verbose_name="Altura ocupada em U")
+
+    marca = models.CharField(max_length=100, blank=True, verbose_name="Marca")
+    modelo = models.CharField(max_length=120, blank=True, verbose_name="Modelo")
+    patrimonio = models.CharField(max_length=80, unique=True, null=True, blank=True, verbose_name="Patrimônio")
+    numero_serie = models.CharField(max_length=140, unique=True, null=True, blank=True, verbose_name="Número de série")
+    ip_gerenciamento = models.GenericIPAddressField(protocol="IPv4", null=True, blank=True, verbose_name="IP de gerenciamento")
+    mac_address = models.CharField(max_length=17, blank=True, verbose_name="MAC")
+    status = models.CharField(max_length=30, choices=STATUS, default=STATUS_ATIVO, verbose_name="Status")
+
+    equipamento = models.OneToOneField(
+        Equipamento,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="ativo_rack",
+        verbose_name="Equipamento relacionado",
+    )
+    switch_rede = models.OneToOneField(
+        SwitchRede,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="ativo_rack",
+        verbose_name="Switch relacionado",
+    )
+
+    observacoes = models.TextField(blank=True, verbose_name="Observações")
+    criado_em = models.DateTimeField(auto_now_add=True, verbose_name="Criado em")
+    atualizado_em = models.DateTimeField(auto_now=True, verbose_name="Atualizado em")
+
+    class Meta:
+        verbose_name = "Ativo do rack"
+        verbose_name_plural = "Ativos do rack"
+        ordering = ["site", "lado", "-posicao_u", "nome"]
+
+    @property
+    def posicao_u_final(self):
+        return self.posicao_u + self.altura_u - 1
+
+    def clean(self):
+        campos_texto = [
+            "nome", "tipo", "tipo_outro_descricao", "lado", "marca", "modelo",
+            "mac_address", "status", "observacoes",
+        ]
+        for campo in campos_texto:
+            setattr(self, campo, (getattr(self, campo) or "").strip())
+
+        self.patrimonio = (self.patrimonio or "").strip() or None
+        self.numero_serie = (self.numero_serie or "").strip() or None
+
+        if not self.nome:
+            raise ValidationError({"nome": "Informe o nome do ativo."})
+
+        if self.tipo == self.TIPO_OUTRO and not self.tipo_outro_descricao:
+            raise ValidationError({"tipo_outro_descricao": "Informe qual é o tipo do ativo."})
+
+        if self.posicao_u < 1:
+            raise ValidationError({"posicao_u": "A posição deve começar em 1U."})
+
+        if self.altura_u < 1 or self.altura_u > 20:
+            raise ValidationError({"altura_u": "Informe uma altura entre 1U e 20U."})
+
+        if self.site_id and self.posicao_u_final > self.site.altura_u:
+            raise ValidationError({
+                "posicao_u": f"O ativo ultrapassa o limite de {self.site.altura_u}U do rack."
+            })
+
+        if self.tipo == self.TIPO_SWITCH and self.switch_rede is None:
+            # É permitido cadastrar um switch genérico sem vínculo, mas o vínculo é recomendado.
+            pass
+
+        if self.switch_rede and self.tipo != self.TIPO_SWITCH:
+            raise ValidationError({"switch_rede": "O vínculo de switch só pode ser usado em ativos do tipo Switch."})
+
+        if self.mac_address:
+            try:
+                self.mac_address = normalizar_mac(self.mac_address)
+            except ValueError as erro:
+                raise ValidationError({"mac_address": str(erro)})
+
+        if self.site_id:
+            inicio = self.posicao_u
+            fim = self.posicao_u_final
+            conflitos = RackAtivo.objects.filter(site=self.site, lado=self.lado)
+            if self.pk:
+                conflitos = conflitos.exclude(pk=self.pk)
+
+            for ativo in conflitos:
+                if inicio <= ativo.posicao_u_final and fim >= ativo.posicao_u:
+                    raise ValidationError({
+                        "posicao_u": (
+                            f"Conflito de espaço com {ativo.nome}, que ocupa "
+                            f"U{ativo.posicao_u} até U{ativo.posicao_u_final}."
+                        )
+                    })
+
+    def save(self, *args, **kwargs):
+        campos_texto = [
+            "nome", "tipo", "tipo_outro_descricao", "lado", "marca", "modelo",
+            "mac_address", "status", "observacoes",
+        ]
+        for campo in campos_texto:
+            setattr(self, campo, (getattr(self, campo) or "").strip())
+
+        self.patrimonio = (self.patrimonio or "").strip() or None
+        self.numero_serie = (self.numero_serie or "").strip() or None
+
+        if self.tipo != self.TIPO_OUTRO:
+            self.tipo_outro_descricao = ""
+
+        if self.tipo != self.TIPO_SWITCH:
+            self.switch_rede = None
+
+        if self.mac_address:
+            self.mac_address = normalizar_mac(self.mac_address)
+
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.site.nome} - {self.nome}"
+
+
+class PatchPanel(models.Model):
+    CATEGORIA_CAT5E = "cat5e"
+    CATEGORIA_CAT6 = "cat6"
+    CATEGORIA_CAT6A = "cat6a"
+    CATEGORIA_FIBRA = "fibra"
+    CATEGORIA_OUTRO = "outro"
+
+    CATEGORIAS = [
+        (CATEGORIA_CAT5E, "CAT5e"),
+        (CATEGORIA_CAT6, "CAT6"),
+        (CATEGORIA_CAT6A, "CAT6A"),
+        (CATEGORIA_FIBRA, "Fibra óptica"),
+        (CATEGORIA_OUTRO, "Outro"),
+    ]
+
+    CONECTOR_RJ45 = "rj45"
+    CONECTOR_LC = "lc"
+    CONECTOR_SC = "sc"
+    CONECTOR_FC = "fc"
+    CONECTOR_OUTRO = "outro"
+
+    CONECTORES = [
+        (CONECTOR_RJ45, "RJ45"),
+        (CONECTOR_LC, "LC"),
+        (CONECTOR_SC, "SC"),
+        (CONECTOR_FC, "FC"),
+        (CONECTOR_OUTRO, "Outro"),
+    ]
+
+    ativo = models.OneToOneField(
+        RackAtivo,
+        on_delete=models.CASCADE,
+        related_name="patch_panel",
+        verbose_name="Ativo do rack",
+    )
+    quantidade_portas = models.PositiveSmallIntegerField(default=24, verbose_name="Quantidade de portas")
+    categoria = models.CharField(max_length=30, choices=CATEGORIAS, default=CATEGORIA_CAT6, verbose_name="Categoria")
+    tipo_conector = models.CharField(max_length=30, choices=CONECTORES, default=CONECTOR_RJ45, verbose_name="Conector")
+    identificacao = models.CharField(max_length=120, blank=True, verbose_name="Identificação")
+    observacoes = models.TextField(blank=True, verbose_name="Observações")
+    criado_em = models.DateTimeField(auto_now_add=True, verbose_name="Criado em")
+    atualizado_em = models.DateTimeField(auto_now=True, verbose_name="Atualizado em")
+
+    class Meta:
+        verbose_name = "Patch panel"
+        verbose_name_plural = "Patch panels"
+        ordering = ["ativo__site", "ativo__posicao_u"]
+
+    def clean(self):
+        self.identificacao = (self.identificacao or "").strip()
+        self.observacoes = (self.observacoes or "").strip()
+
+        if self.ativo_id and self.ativo.tipo != RackAtivo.TIPO_PATCH_PANEL:
+            raise ValidationError({"ativo": "O ativo relacionado deve ser do tipo Patch panel."})
+
+        if self.quantidade_portas < 4 or self.quantidade_portas > 96:
+            raise ValidationError({"quantidade_portas": "Informe uma quantidade entre 4 e 96 portas."})
+
+    def save(self, *args, **kwargs):
+        self.identificacao = (self.identificacao or "").strip()
+        self.observacoes = (self.observacoes or "").strip()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.ativo.nome} - {self.quantidade_portas} portas"
+
+
+class PatchPanelPorta(models.Model):
+    STATUS_LIVRE = "livre"
+    STATUS_EM_USO = "em_uso"
+    STATUS_RESERVA = "reserva"
+    STATUS_DEFEITUOSA = "defeituosa"
+
+    STATUS = [
+        (STATUS_LIVRE, "Livre"),
+        (STATUS_EM_USO, "Em uso"),
+        (STATUS_RESERVA, "Reserva"),
+        (STATUS_DEFEITUOSA, "Defeituosa"),
+    ]
+
+    patch_panel = models.ForeignKey(
+        PatchPanel,
+        on_delete=models.CASCADE,
+        related_name="portas",
+        verbose_name="Patch panel",
+    )
+    numero = models.PositiveSmallIntegerField(verbose_name="Número da porta")
+    status = models.CharField(max_length=30, choices=STATUS, default=STATUS_LIVRE, verbose_name="Status")
+    identificacao = models.CharField(max_length=120, blank=True, verbose_name="Identificação")
+    ponto_logico = models.CharField(max_length=100, blank=True, verbose_name="Ponto lógico / tomada")
+    local_destino = models.CharField(max_length=180, blank=True, verbose_name="Local de destino")
+
+    setor = models.ForeignKey(
+        Setor,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="portas_patch_panel",
+        verbose_name="Setor atendido",
+    )
+    computador = models.ForeignKey(
+        ComputadorUsuario,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="portas_patch_panel",
+        verbose_name="Computador relacionado",
+    )
+    equipamento = models.ForeignKey(
+        Equipamento,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="portas_patch_panel",
+        verbose_name="Equipamento relacionado",
+    )
+    switch_porta = models.ForeignKey(
+        SwitchPorta,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="portas_patch_panel",
+        verbose_name="Porta do switch relacionada",
+    )
+
+    observacoes = models.TextField(blank=True, verbose_name="Observações")
+    criado_em = models.DateTimeField(auto_now_add=True, verbose_name="Criado em")
+    atualizado_em = models.DateTimeField(auto_now=True, verbose_name="Atualizado em")
+
+    class Meta:
+        verbose_name = "Porta do patch panel"
+        verbose_name_plural = "Portas do patch panel"
+        ordering = ["patch_panel", "numero"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["patch_panel", "numero"],
+                name="patch_panel_porta_numero_unico",
+            ),
+        ]
+
+    def clean(self):
+        self.identificacao = (self.identificacao or "").strip()
+        self.ponto_logico = (self.ponto_logico or "").strip()
+        self.local_destino = (self.local_destino or "").strip()
+        self.observacoes = (self.observacoes or "").strip()
+
+        if self.patch_panel_id and (
+            self.numero < 1 or self.numero > self.patch_panel.quantidade_portas
+        ):
+            raise ValidationError({"numero": "A porta está fora da quantidade configurada no patch panel."})
+
+        if self.computador_id and self.equipamento_id:
+            raise ValidationError("Vincule somente um dispositivo final por porta.")
+
+    def save(self, *args, **kwargs):
+        self.identificacao = (self.identificacao or "").strip()
+        self.ponto_logico = (self.ponto_logico or "").strip()
+        self.local_destino = (self.local_destino or "").strip()
+        self.observacoes = (self.observacoes or "").strip()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.patch_panel.ativo.nome} - Porta {self.numero}"
+# === FIM MODULO SITES / RACKS ===

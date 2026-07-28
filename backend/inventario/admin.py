@@ -182,3 +182,35 @@ class ManutencaoEquipamentoAdmin(admin.ModelAdmin):
         "criado_em",
         "atualizado_em",
     ]
+
+# === ADMIN SITES / RACKS ===
+from .models import PatchPanel, PatchPanelPorta, RackAtivo, SiteRack
+
+
+@admin.register(SiteRack)
+class SiteRackAdmin(admin.ModelAdmin):
+    list_display = ["nome", "codigo", "setor", "localizacao", "altura_u", "status", "atualizado_em"]
+    search_fields = ["nome", "codigo", "localizacao", "responsavel", "observacoes"]
+    list_filter = ["status", "setor", "altura_u"]
+
+
+@admin.register(RackAtivo)
+class RackAtivoAdmin(admin.ModelAdmin):
+    list_display = ["nome", "site", "tipo", "lado", "posicao_u", "altura_u", "ip_gerenciamento", "status"]
+    search_fields = ["nome", "site__nome", "marca", "modelo", "patrimonio", "numero_serie", "ip_gerenciamento"]
+    list_filter = ["tipo", "status", "lado", "site"]
+
+
+@admin.register(PatchPanel)
+class PatchPanelAdmin(admin.ModelAdmin):
+    list_display = ["ativo", "quantidade_portas", "categoria", "tipo_conector", "atualizado_em"]
+    list_filter = ["categoria", "tipo_conector"]
+
+
+@admin.register(PatchPanelPorta)
+class PatchPanelPortaAdmin(admin.ModelAdmin):
+    list_display = ["patch_panel", "numero", "status", "identificacao", "ponto_logico", "local_destino", "setor"]
+    search_fields = ["patch_panel__ativo__nome", "identificacao", "ponto_logico", "local_destino"]
+    list_filter = ["status", "setor"]
+# === FIM ADMIN SITES / RACKS ===
+

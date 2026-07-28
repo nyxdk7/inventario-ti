@@ -12,6 +12,8 @@ import ManutencoesPage from "./pages/ManutencoesPage";
 import RelatoriosPage from "./pages/RelatoriosPage";
 import SetorDetalhePage from "./pages/SetorDetalhePage";
 import SetoresPage from "./pages/SetoresPage";
+import SiteDetalhePage from "./pages/SiteDetalhePage";
+import SitesPage from "./pages/SitesPage";
 import StarlinkDetalhePage from "./pages/StarlinkDetalhePage";
 import StarlinksPage from "./pages/StarlinksPage";
 import SwitchDetalhePage from "./pages/SwitchDetalhePage";
@@ -50,6 +52,7 @@ export default function App() {
   const [paginaAtual, setPaginaAtual] = useState("dashboard");
   const [equipamentoDetalheId, setEquipamentoDetalheId] = useState(null);
   const [setorDetalheId, setSetorDetalheId] = useState(null);
+  const [siteDetalheId, setSiteDetalheId] = useState(null);
   const [switchDetalheId, setSwitchDetalheId] = useState(null);
   const [starlinkDetalheId, setStarlinkDetalheId] = useState(null);
   const [usuario, setUsuario] = useState(null);
@@ -83,6 +86,7 @@ export default function App() {
       setPaginaAtual("dashboard");
       setEquipamentoDetalheId(null);
       setSetorDetalheId(null);
+      setSiteDetalheId(null);
       setSwitchDetalheId(null);
       setStarlinkDetalheId(null);
     }
@@ -102,6 +106,7 @@ export default function App() {
       setPaginaAtual("dashboard");
       setEquipamentoDetalheId(null);
       setSetorDetalheId(null);
+      setSiteDetalheId(null);
       setSwitchDetalheId(null);
       setStarlinkDetalheId(null);
     }
@@ -155,6 +160,10 @@ export default function App() {
       setSetorDetalheId(null);
     }
 
+    if (pagina !== "site_detalhe") {
+      setSiteDetalheId(null);
+    }
+
     if (pagina !== "switch_detalhe") {
       setSwitchDetalheId(null);
     }
@@ -171,6 +180,7 @@ export default function App() {
 
     setEquipamentoDetalheId(equipamentoId);
     setSetorDetalheId(null);
+    setSiteDetalheId(null);
     setPaginaAtual("equipamento_detalhe");
   }
 
@@ -181,7 +191,21 @@ export default function App() {
 
     setSetorDetalheId(setorId);
     setEquipamentoDetalheId(null);
+    setSiteDetalheId(null);
     setPaginaAtual("setor_detalhe");
+  }
+
+  function abrirDetalhesSite(siteId) {
+    if (usuarioPrecisaTrocarSenha(usuario)) {
+      return;
+    }
+
+    setSiteDetalheId(siteId);
+    setEquipamentoDetalheId(null);
+    setSetorDetalheId(null);
+    setSwitchDetalheId(null);
+    setStarlinkDetalheId(null);
+    setPaginaAtual("site_detalhe");
   }
 
   function abrirDetalhesSwitch(switchId) {
@@ -192,6 +216,7 @@ export default function App() {
     setSwitchDetalheId(switchId);
     setEquipamentoDetalheId(null);
     setSetorDetalheId(null);
+    setSiteDetalheId(null);
     setPaginaAtual("switch_detalhe");
   }
 
@@ -204,6 +229,7 @@ export default function App() {
     setSwitchDetalheId(null);
     setEquipamentoDetalheId(null);
     setSetorDetalheId(null);
+    setSiteDetalheId(null);
     setPaginaAtual("starlink_detalhe");
   }
 
@@ -217,6 +243,7 @@ export default function App() {
       setPaginaAtual("dashboard");
       setEquipamentoDetalheId(null);
       setSetorDetalheId(null);
+      setSiteDetalheId(null);
       setSwitchDetalheId(null);
       setStarlinkDetalheId(null);
     }
@@ -277,6 +304,26 @@ export default function App() {
         <EquipamentoDetalhePage
           equipamentoId={equipamentoDetalheId}
           aoVoltar={() => trocarPagina("equipamentos")}
+          permissoes={permissoes}
+        />
+      );
+    }
+
+    if (paginaAtual === "sites") {
+      return (
+        <SitesPage
+          permissoes={permissoes}
+          aoVerDetalhes={abrirDetalhesSite}
+        />
+      );
+    }
+
+    if (paginaAtual === "site_detalhe" && siteDetalheId) {
+      return (
+        <SiteDetalhePage
+          siteId={siteDetalheId}
+          aoVoltar={() => trocarPagina("sites")}
+          aoAbrirSwitch={abrirDetalhesSwitch}
           permissoes={permissoes}
         />
       );

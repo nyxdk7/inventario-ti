@@ -11,6 +11,7 @@ import {
   FiKey,
   FiLayers,
   FiLogOut,
+  FiMap,
   FiMenu,
   FiMonitor,
   FiPackage,
@@ -52,6 +53,8 @@ function tituloPagina(paginaAtual) {
   if (paginaAtual === "setor_detalhe") return "Detalhes do setor";
   if (paginaAtual === "equipamentos") return "Equipamentos";
   if (paginaAtual === "equipamento_detalhe") return "Detalhes do equipamento";
+  if (paginaAtual === "sites") return "Sites e racks";
+  if (paginaAtual === "site_detalhe") return "Mapa físico do rack";
   if (paginaAtual === "switches") return "Switches de rede";
   if (paginaAtual === "switch_detalhe") return "Mapa de portas do switch";
   if (paginaAtual === "starlinks") return "Gestão de Starlinks";
@@ -70,6 +73,8 @@ function subtituloPagina(paginaAtual) {
   if (paginaAtual === "setor_detalhe") return "Computadores, usuários e equipamentos vinculados ao setor";
   if (paginaAtual === "equipamentos") return "Cadastro de patrimônio, marca, modelo, série, setor e status";
   if (paginaAtual === "equipamento_detalhe") return "Visão completa do patrimônio, fotos, compra e histórico";
+  if (paginaAtual === "sites") return "Cadastro dos racks e visão dos ativos instalados em cada local";
+  if (paginaAtual === "site_detalhe") return "Representação física em U, switches, patch panels, roteadores e demais ativos";
   if (paginaAtual === "switches") return "Cadastro e mapa físico dos switches da infraestrutura";
   if (paginaAtual === "switch_detalhe") return "Controle de ocupação, dispositivos, IP, MAC, VLAN e responsáveis por porta";
   if (paginaAtual === "starlinks") return "Assinaturas, equipamentos, locais, responsáveis e preparação para telemetria";
@@ -88,6 +93,8 @@ function nomeModulo(paginaAtual) {
   if (paginaAtual === "setor_detalhe") return "Detalhes";
   if (paginaAtual === "equipamentos") return "Equipamentos";
   if (paginaAtual === "equipamento_detalhe") return "Detalhes";
+  if (paginaAtual === "sites") return "Sites";
+  if (paginaAtual === "site_detalhe") return "Rack";
   if (paginaAtual === "switches") return "Switches";
   if (paginaAtual === "switch_detalhe") return "Portas";
   if (paginaAtual === "starlinks") return "Starlink";
@@ -123,6 +130,7 @@ export default function Layout({
   );
 
   const equipamentosAtivo = paginaAtual === "equipamentos" || paginaAtual === "equipamento_detalhe";
+  const sitesAtivo = paginaAtual === "sites" || paginaAtual === "site_detalhe";
   const switchesAtivo = paginaAtual === "switches" || paginaAtual === "switch_detalhe";
   const starlinksAtivo = paginaAtual === "starlinks" || paginaAtual === "starlink_detalhe";
   const infraestruturaAtiva = switchesAtivo || starlinksAtivo;
@@ -229,6 +237,11 @@ export default function Layout({
           <button type="button" onClick={() => navegar("equipamentos")} className={`${itemClasse(equipamentosAtivo)} mt-2`}>
             <span className={iconeClasse(equipamentosAtivo)}><FiHardDrive size={18} /></span>
             {menuExpandido && <span>Equipamentos</span>}
+          </button>
+
+          <button type="button" onClick={() => navegar("sites")} className={`${itemClasse(sitesAtivo)} mt-2`}>
+            <span className={iconeClasse(sitesAtivo)}><FiMap size={18} /></span>
+            {menuExpandido && <span>Sites</span>}
           </button>
 
           <div className="mt-2">
