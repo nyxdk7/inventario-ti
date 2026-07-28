@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import auth_api, backup_api, relatorios, sistema_config_api, switch_api, views
+from . import auth_api, backup_api, relatorios, sistema_config_api, starlink_api, switch_api, views
 
 
 urlpatterns = [
@@ -40,6 +40,9 @@ urlpatterns = [
     path("switches/", switch_api.switches, name="switches"),
     path("switches/<int:pk>/", switch_api.switch_detalhe, name="switch_detalhe"),
     path("switches/portas/<int:pk>/", switch_api.switch_porta_detalhe, name="switch_porta_detalhe"),
+
+    path("starlinks/", starlink_api.starlinks, name="starlinks"),
+    path("starlinks/<int:pk>/", starlink_api.starlink_detalhe, name="starlink_detalhe"),
 
     path("relatorios/equipamentos/excel/", relatorios.equipamentos_excel, name="relatorio_equipamentos_excel"),
     path("relatorios/equipamentos/pdf/", relatorios.equipamentos_pdf, name="relatorio_equipamentos_pdf"),

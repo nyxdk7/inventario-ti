@@ -12,6 +12,8 @@ import ManutencoesPage from "./pages/ManutencoesPage";
 import RelatoriosPage from "./pages/RelatoriosPage";
 import SetorDetalhePage from "./pages/SetorDetalhePage";
 import SetoresPage from "./pages/SetoresPage";
+import StarlinkDetalhePage from "./pages/StarlinkDetalhePage";
+import StarlinksPage from "./pages/StarlinksPage";
 import SwitchDetalhePage from "./pages/SwitchDetalhePage";
 import SwitchesPage from "./pages/SwitchesPage";
 import TrocarSenhaPage from "./pages/TrocarSenhaPage";
@@ -49,6 +51,7 @@ export default function App() {
   const [equipamentoDetalheId, setEquipamentoDetalheId] = useState(null);
   const [setorDetalheId, setSetorDetalheId] = useState(null);
   const [switchDetalheId, setSwitchDetalheId] = useState(null);
+  const [starlinkDetalheId, setStarlinkDetalheId] = useState(null);
   const [usuario, setUsuario] = useState(null);
   const [carregandoSessao, setCarregandoSessao] = useState(true);
 
@@ -81,6 +84,7 @@ export default function App() {
       setEquipamentoDetalheId(null);
       setSetorDetalheId(null);
       setSwitchDetalheId(null);
+      setStarlinkDetalheId(null);
     }
 
     function forcarTrocaSenha() {
@@ -99,6 +103,7 @@ export default function App() {
       setEquipamentoDetalheId(null);
       setSetorDetalheId(null);
       setSwitchDetalheId(null);
+      setStarlinkDetalheId(null);
     }
 
     window.addEventListener("sessao-expirada", encerrarSessao);
@@ -116,6 +121,7 @@ export default function App() {
     setEquipamentoDetalheId(null);
     setSetorDetalheId(null);
     setSwitchDetalheId(null);
+    setStarlinkDetalheId(null);
   }
 
   function trocarPagina(pagina) {
@@ -152,6 +158,10 @@ export default function App() {
     if (pagina !== "switch_detalhe") {
       setSwitchDetalheId(null);
     }
+
+    if (pagina !== "starlink_detalhe") {
+      setStarlinkDetalheId(null);
+    }
   }
 
   function abrirDetalhesEquipamento(equipamentoId) {
@@ -185,6 +195,18 @@ export default function App() {
     setPaginaAtual("switch_detalhe");
   }
 
+  function abrirDetalhesStarlink(starlinkId) {
+    if (usuarioPrecisaTrocarSenha(usuario)) {
+      return;
+    }
+
+    setStarlinkDetalheId(starlinkId);
+    setSwitchDetalheId(null);
+    setEquipamentoDetalheId(null);
+    setSetorDetalheId(null);
+    setPaginaAtual("starlink_detalhe");
+  }
+
   async function sair() {
     try {
       await apiRequest("/auth/logout/", {
@@ -196,6 +218,7 @@ export default function App() {
       setEquipamentoDetalheId(null);
       setSetorDetalheId(null);
       setSwitchDetalheId(null);
+      setStarlinkDetalheId(null);
     }
   }
 
@@ -209,6 +232,7 @@ export default function App() {
     setEquipamentoDetalheId(null);
     setSetorDetalheId(null);
     setSwitchDetalheId(null);
+    setStarlinkDetalheId(null);
   }
 
   function renderizarPagina() {
@@ -273,6 +297,24 @@ export default function App() {
           switchId={switchDetalheId}
           aoVoltar={() => trocarPagina("switches")}
           permissoes={permissoes}
+        />
+      );
+    }
+
+    if (paginaAtual === "starlinks") {
+      return (
+        <StarlinksPage
+          permissoes={permissoes}
+          aoVerDetalhes={abrirDetalhesStarlink}
+        />
+      );
+    }
+
+    if (paginaAtual === "starlink_detalhe" && starlinkDetalheId) {
+      return (
+        <StarlinkDetalhePage
+          starlinkId={starlinkDetalheId}
+          aoVoltar={() => trocarPagina("starlinks")}
         />
       );
     }

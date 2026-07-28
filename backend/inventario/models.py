@@ -732,3 +732,248 @@ class SwitchPortaHistorico(models.Model):
 
     def __str__(self):
         return f"{self.porta} - {self.criado_em:%d/%m/%Y %H:%M}"
+
+
+class Starlink(models.Model):
+    STATUS_ATIVA = "ativa"
+    STATUS_CANCELADA = "cancelada"
+    STATUS_ESPERA = "espera"
+    STATUS_MANUTENCAO = "manutencao"
+    STATUS_RESERVA = "reserva"
+
+    STATUS = [
+        (STATUS_ATIVA, "Ativa"),
+        (STATUS_CANCELADA, "Cancelada"),
+        (STATUS_ESPERA, "Em espera"),
+        (STATUS_MANUTENCAO, "Em manutenção"),
+        (STATUS_RESERVA, "Reserva"),
+    ]
+
+    TIPO_FIXA = "fixa"
+    TIPO_VEICULO = "veiculo"
+    TIPO_MAQUINA = "maquina"
+    TIPO_OBRA = "obra"
+    TIPO_RESERVA = "reserva"
+
+    TIPOS_UTILIZACAO = [
+        (TIPO_FIXA, "Instalação fixa"),
+        (TIPO_VEICULO, "Veículo"),
+        (TIPO_MAQUINA, "Máquina / equipamento"),
+        (TIPO_OBRA, "Obra / frente de serviço"),
+        (TIPO_RESERVA, "Reserva"),
+    ]
+
+    SINCRONIZACAO_NAO_CONFIGURADA = "nao_configurada"
+    SINCRONIZACAO_PENDENTE = "pendente"
+    SINCRONIZACAO_SINCRONIZADA = "sincronizada"
+    SINCRONIZACAO_ERRO = "erro"
+    SINCRONIZACAO_SEM_DADOS = "sem_dados"
+
+    STATUS_SINCRONIZACAO = [
+        (SINCRONIZACAO_NAO_CONFIGURADA, "Não configurada"),
+        (SINCRONIZACAO_PENDENTE, "Pendente"),
+        (SINCRONIZACAO_SINCRONIZADA, "Sincronizada"),
+        (SINCRONIZACAO_ERRO, "Erro"),
+        (SINCRONIZACAO_SEM_DADOS, "Sem dados"),
+    ]
+
+    nome = models.CharField(max_length=150, unique=True, verbose_name="Nome identificador")
+    email_conta = models.EmailField(max_length=180, verbose_name="E-mail da conta")
+    telefone = models.CharField(max_length=30, blank=True, verbose_name="Telefone")
+    localizacao = models.CharField(max_length=180, blank=True, verbose_name="Localização")
+    plano = models.CharField(max_length=120, blank=True, verbose_name="Plano")
+    placa = models.CharField(max_length=20, blank=True, verbose_name="Placa")
+    numero_serie = models.CharField(max_length=140, unique=True, verbose_name="Número de série")
+    modelo = models.CharField(max_length=100, verbose_name="Modelo")
+    status = models.CharField(max_length=30, choices=STATUS, default=STATUS_ATIVA, verbose_name="Status")
+    tipo_utilizacao = models.CharField(
+        max_length=30,
+        choices=TIPOS_UTILIZACAO,
+        default=TIPO_FIXA,
+        verbose_name="Tipo de utilização",
+    )
+    responsavel = models.CharField(max_length=150, blank=True, verbose_name="Responsável")
+    setor = models.ForeignKey(
+        Setor,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="starlinks",
+        verbose_name="Setor",
+    )
+    equipamento = models.OneToOneField(
+        Equipamento,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="starlink",
+        verbose_name="Equipamento relacionado",
+    )
+    data_instalacao = models.DateField(null=True, blank=True, verbose_name="Data de instalação")
+    data_ativacao = models.DateField(null=True, blank=True, verbose_name="Data de ativação")
+    data_cancelamento = models.DateField(null=True, blank=True, verbose_name="Data de cancelamento")
+    valor_mensalidade = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name="Valor da mensalidade",
+    )
+    centro_custo = models.CharField(max_length=120, blank=True, verbose_name="Centro de custo")
+    observacoes = models.TextField(blank=True, verbose_name="Observações")
+
+    integracao_habilitada = models.BooleanField(default=False, verbose_name="Integração com API habilitada")
+    account_id = models.CharField(max_length=160, unique=True, null=True, blank=True, verbose_name="Account ID")
+    starlink_id = models.CharField(max_length=160, unique=True, null=True, blank=True, verbose_name="Starlink ID")
+    user_terminal_id = models.CharField(max_length=160, unique=True, null=True, blank=True, verbose_name="User Terminal ID")
+    service_line_id = models.CharField(max_length=160, unique=True, null=True, blank=True, verbose_name="Service Line ID")
+    kit_number = models.CharField(max_length=160, unique=True, null=True, blank=True, verbose_name="Kit Number")
+    ultima_sincronizacao = models.DateTimeField(null=True, blank=True, verbose_name="Última sincronização")
+    status_sincronizacao = models.CharField(
+        max_length=30,
+        choices=STATUS_SINCRONIZACAO,
+        default=SINCRONIZACAO_NAO_CONFIGURADA,
+        verbose_name="Status da sincronização",
+    )
+    mensagem_erro_sincronizacao = models.TextField(blank=True, verbose_name="Erro da sincronização")
+
+    criado_em = models.DateTimeField(auto_now_add=True, verbose_name="Criado em")
+    atualizado_em = models.DateTimeField(auto_now=True, verbose_name="Atualizado em")
+
+    class Meta:
+        verbose_name = "Starlink"
+        verbose_name_plural = "Starlinks"
+        ordering = ["nome"]
+
+    def clean(self):
+        campos_texto = [
+            "nome",
+            "email_conta",
+            "telefone",
+            "localizacao",
+            "plano",
+            "placa",
+            "numero_serie",
+            "modelo",
+            "status",
+            "tipo_utilizacao",
+            "responsavel",
+            "centro_custo",
+            "observacoes",
+            "status_sincronizacao",
+            "mensagem_erro_sincronizacao",
+        ]
+
+        for campo in campos_texto:
+            setattr(self, campo, (getattr(self, campo) or "").strip())
+
+        for campo in ["account_id", "starlink_id", "user_terminal_id", "service_line_id", "kit_number"]:
+            setattr(self, campo, (getattr(self, campo) or "").strip() or None)
+
+        if not self.nome:
+            raise ValidationError({"nome": "Informe um nome para identificar a Starlink."})
+
+        if not self.email_conta:
+            raise ValidationError({"email_conta": "Informe o e-mail da conta."})
+
+        if not self.numero_serie:
+            raise ValidationError({"numero_serie": "Informe o número de série."})
+
+        if not self.modelo:
+            raise ValidationError({"modelo": "Informe o modelo da Starlink."})
+
+        if self.status == self.STATUS_CANCELADA and not self.data_cancelamento:
+            raise ValidationError({"data_cancelamento": "Informe a data de cancelamento."})
+
+        if self.valor_mensalidade is not None and self.valor_mensalidade < 0:
+            raise ValidationError({"valor_mensalidade": "O valor da mensalidade não pode ser negativo."})
+
+    def save(self, *args, **kwargs):
+        campos_texto = [
+            "nome",
+            "email_conta",
+            "telefone",
+            "localizacao",
+            "plano",
+            "placa",
+            "numero_serie",
+            "modelo",
+            "status",
+            "tipo_utilizacao",
+            "responsavel",
+            "centro_custo",
+            "observacoes",
+            "status_sincronizacao",
+            "mensagem_erro_sincronizacao",
+        ]
+
+        for campo in campos_texto:
+            setattr(self, campo, (getattr(self, campo) or "").strip())
+
+        for campo in ["account_id", "starlink_id", "user_terminal_id", "service_line_id", "kit_number"]:
+            setattr(self, campo, (getattr(self, campo) or "").strip() or None)
+
+        if not self.integracao_habilitada:
+            self.status_sincronizacao = self.SINCRONIZACAO_NAO_CONFIGURADA
+            self.mensagem_erro_sincronizacao = ""
+
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.nome} - {self.numero_serie}"
+
+
+class StarlinkTelemetria(models.Model):
+    STATUS_DESCONHECIDO = "desconhecido"
+    STATUS_ONLINE = "online"
+    STATUS_OFFLINE = "offline"
+    STATUS_SEM_DADOS = "sem_dados"
+
+    STATUS_CONEXAO = [
+        (STATUS_DESCONHECIDO, "Desconhecido"),
+        (STATUS_ONLINE, "Online"),
+        (STATUS_OFFLINE, "Offline"),
+        (STATUS_SEM_DADOS, "Sem dados"),
+    ]
+
+    starlink = models.OneToOneField(
+        Starlink,
+        on_delete=models.CASCADE,
+        related_name="telemetria",
+        verbose_name="Starlink",
+    )
+    status_conexao = models.CharField(
+        max_length=30,
+        choices=STATUS_CONEXAO,
+        default=STATUS_DESCONHECIDO,
+        verbose_name="Status da conexão",
+    )
+    download_mbps = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Download Mbps")
+    upload_mbps = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Upload Mbps")
+    latencia_ms = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Latência ms")
+    perda_pacotes_percentual = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name="Perda de pacotes %",
+    )
+    obstrucao_percentual = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name="Obstrução %",
+    )
+    uptime_segundos = models.PositiveBigIntegerField(null=True, blank=True, verbose_name="Uptime em segundos")
+    ultima_comunicacao = models.DateTimeField(null=True, blank=True, verbose_name="Última comunicação")
+    payload_bruto = models.JSONField(default=dict, blank=True, verbose_name="Dados brutos da API")
+    atualizado_em = models.DateTimeField(auto_now=True, verbose_name="Atualizado em")
+
+    class Meta:
+        verbose_name = "Telemetria da Starlink"
+        verbose_name_plural = "Telemetrias das Starlinks"
+        ordering = ["starlink__nome"]
+
+    def __str__(self):
+        return f"Telemetria - {self.starlink.nome}"

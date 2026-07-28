@@ -9,6 +9,7 @@ import {
   FiGrid,
   FiHardDrive,
   FiKey,
+  FiLayers,
   FiLogOut,
   FiMenu,
   FiMonitor,
@@ -17,6 +18,7 @@ import {
   FiServer,
   FiTool,
   FiUsers,
+  FiWifi,
   FiX,
 } from "react-icons/fi";
 
@@ -52,6 +54,8 @@ function tituloPagina(paginaAtual) {
   if (paginaAtual === "equipamento_detalhe") return "Detalhes do equipamento";
   if (paginaAtual === "switches") return "Switches de rede";
   if (paginaAtual === "switch_detalhe") return "Mapa de portas do switch";
+  if (paginaAtual === "starlinks") return "Gestão de Starlinks";
+  if (paginaAtual === "starlink_detalhe") return "Detalhes da Starlink";
   if (paginaAtual === "manutencoes") return "Histórico e manutenções";
   if (paginaAtual === "relatorios") return "Relatórios";
   if (paginaAtual === "usuarios") return "Usuários e permissões";
@@ -68,6 +72,8 @@ function subtituloPagina(paginaAtual) {
   if (paginaAtual === "equipamento_detalhe") return "Visão completa do patrimônio, fotos, compra e histórico";
   if (paginaAtual === "switches") return "Cadastro e mapa físico dos switches da infraestrutura";
   if (paginaAtual === "switch_detalhe") return "Controle de ocupação, dispositivos, IP, MAC, VLAN e responsáveis por porta";
+  if (paginaAtual === "starlinks") return "Assinaturas, equipamentos, locais, responsáveis e preparação para telemetria";
+  if (paginaAtual === "starlink_detalhe") return "Visão geral, assinatura, equipamento e dados preparados para integração";
   if (paginaAtual === "manutencoes") return "Registros de manutenção, movimentação, limpeza, baixa e observações";
   if (paginaAtual === "relatorios") return "Exportação de dados em Excel e PDF";
   if (paginaAtual === "usuarios") return "Gerenciamento de acesso por perfil de usuário";
@@ -84,6 +90,8 @@ function nomeModulo(paginaAtual) {
   if (paginaAtual === "equipamento_detalhe") return "Detalhes";
   if (paginaAtual === "switches") return "Switches";
   if (paginaAtual === "switch_detalhe") return "Portas";
+  if (paginaAtual === "starlinks") return "Starlink";
+  if (paginaAtual === "starlink_detalhe") return "Starlink";
   if (paginaAtual === "manutencoes") return "Histórico";
   if (paginaAtual === "relatorios") return "Relatórios";
   if (paginaAtual === "usuarios") return "Usuários";
@@ -107,9 +115,17 @@ export default function Layout({
       paginaAtual === "backups" ||
       paginaAtual === "configuracoes"
   );
+  const [infraestruturaAberta, setInfraestruturaAberta] = useState(
+    paginaAtual === "switches" ||
+      paginaAtual === "switch_detalhe" ||
+      paginaAtual === "starlinks" ||
+      paginaAtual === "starlink_detalhe"
+  );
 
   const equipamentosAtivo = paginaAtual === "equipamentos" || paginaAtual === "equipamento_detalhe";
   const switchesAtivo = paginaAtual === "switches" || paginaAtual === "switch_detalhe";
+  const starlinksAtivo = paginaAtual === "starlinks" || paginaAtual === "starlink_detalhe";
+  const infraestruturaAtiva = switchesAtivo || starlinksAtivo;
   const setoresAtivo = paginaAtual === "setores" || paginaAtual === "setor_detalhe";
   const administradorAtivo = paginaAtual === "usuarios" || paginaAtual === "backups" || paginaAtual === "configuracoes";
 
@@ -118,6 +134,12 @@ export default function Layout({
       setAdminAberto(true);
     }
   }, [administradorAtivo]);
+
+  useEffect(() => {
+    if (infraestruturaAtiva) {
+      setInfraestruturaAberta(true);
+    }
+  }, [infraestruturaAtiva]);
 
   function navegar(pagina) {
     aoTrocarPagina(pagina);
@@ -132,6 +154,16 @@ export default function Layout({
     }
 
     setAdminAberto((estadoAtual) => !estadoAtual);
+  }
+
+  function alternarInfraestrutura(mobile = false) {
+    if (!mobile && !menuAberto) {
+      setMenuAberto(true);
+      setInfraestruturaAberta(true);
+      return;
+    }
+
+    setInfraestruturaAberta((estadoAtual) => !estadoAtual);
   }
 
   function MenuConteudo({ mobile = false }) {
@@ -199,10 +231,35 @@ export default function Layout({
             {menuExpandido && <span>Equipamentos</span>}
           </button>
 
-          <button type="button" onClick={() => navegar("switches")} className={`${itemClasse(switchesAtivo)} mt-2`}>
-            <span className={iconeClasse(switchesAtivo)}><FiServer size={18} /></span>
-            {menuExpandido && <span>Switches</span>}
-          </button>
+          <div className="mt-2">
+            <button
+              type="button"
+              onClick={() => alternarInfraestrutura(mobile)}
+              className={itemClasse(infraestruturaAtiva)}
+            >
+              <span className={iconeClasse(infraestruturaAtiva)}><FiLayers size={18} /></span>
+              {menuExpandido && (
+                <>
+                  <span className="flex-1">Infraestrutura</span>
+                  <FiChevronDown size={16} className={`transition-transform ${infraestruturaAberta ? "rotate-180" : ""}`} />
+                </>
+              )}
+            </button>
+
+            {infraestruturaAberta && menuExpandido && (
+              <div className="mt-1 space-y-1 border-l border-white/10 pl-2">
+                <button type="button" onClick={() => navegar("switches")} className={subItemClasse(switchesAtivo)}>
+                  <FiServer size={16} />
+                  <span>Switches</span>
+                </button>
+
+                <button type="button" onClick={() => navegar("starlinks")} className={subItemClasse(starlinksAtivo)}>
+                  <FiWifi size={16} />
+                  <span>Starlink</span>
+                </button>
+              </div>
+            )}
+          </div>
 
           <button type="button" onClick={() => navegar("manutencoes")} className={`${itemClasse(paginaAtual === "manutencoes")} mt-2`}>
             <span className={iconeClasse(paginaAtual === "manutencoes")}><FiTool size={18} /></span>
